@@ -4,7 +4,7 @@
 
 ### Team Members
 
-Kavi Daliparti, Akash Maiti, Shreyas kumar, Saharsh lavu, Sanjay Senthil
+Kavi Daliparti, Akash Maiti, Shreyas Kumar, Saharsh Lavu, Sanjay Senthil
 
 ### Sprint Cadence
 
