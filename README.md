@@ -30,7 +30,14 @@ We will use an Agile approach. GitHub will hold our shared code and documentatio
 
 ### Toolchain
 
-
+| Tool | Planned use |
+|---|---|
+| React | Build the account, project, and equipment screens. |
+| Python and Flask | Create an API for users, projects, equipment status, checkouts, and returns. |
+| MongoDB | Store user, project, hardware, and checkout information. |
+| PyTest | Test API functions and equipment availability updates. |
+| GitHub | Store code and documents, review changes, and track tasks. |
+| Cloud hosting | Make the app accessible to the instructor and TAs in a later phase. |
 
 ## Product Features
 
