@@ -38,7 +38,7 @@ We will use an Agile approach. GitHub will hold our shared code and documentatio
 
 ### User Stories
 
-
+User Stories can be found in the Issues tab under this repository
 
 
 ### Technical Debt
