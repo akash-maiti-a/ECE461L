@@ -22,11 +22,13 @@ We will use an Agile approach. GitHub will hold our shared code and documentatio
 
 ### Collaboration Tools
 
-
+We will use Github, Google Docs, and iMessage as the main forms of collaboration, secondary collaboration tools include Gmail and other Google or Microsoft Suite technologies if needed.
 
 ### Implementation Methodology
 
+The React frontend will send requests to the Flask API. The API will read and update information in MongoDB. We will organize account, project, and equipment functions separately so we can add more hardware sets later.
 
+We will first build the required features for two hardware sets: HWSet1 (camera kits) and HWSet2 (audio and lighting kits). Users will be able to sign in, access a project, see equipment availability, and check equipment out and back in.
 
 ### Toolchain
 
