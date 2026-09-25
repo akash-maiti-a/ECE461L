@@ -52,3 +52,4 @@ We will use an Agile approach. GitHub will hold our shared code and documentatio
 
 
 ## High Level Sketch
+![Sketch](pics/sketch.png)
