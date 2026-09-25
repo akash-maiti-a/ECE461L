@@ -47,7 +47,7 @@ We will first build the required features for two hardware sets: HWSet1 (camera 
 
 ### User Stories
 
-
+User Stories can be found in the Issues tab under this repository
 
 
 ### Technical Debt
