@@ -1,38 +1,482 @@
-.App {
-  text-align: center;
+/* Creator EaaS: equipment-cage look.
+   Studio-cyc gray walls, slate ink, and spike tape (yellow for camera kits,
+   blue for audio and lighting) as the only bright colors. */
+
+:root {
+  --cyc: #e4e9ec;
+  --surface: #f3f6f7;
+  --ink: #17202a;
+  --steel: #5a6672;
+  --rule: #c3ccd3;
+  --slot-empty: #9aa6b0;
+  --tape-camera: #f4c430;
+  --tape-audio: #79aef2;
+  --tape-ink: #17202a;
+  --focus: #1f5fc4;
+  --error: #a3261b;
+  --error-bg: #f8e3e0;
+
+  --font-body: 'Archivo', system-ui, sans-serif;
+  --font-marker: 'Permanent Marker', 'Archivo', cursive;
+
+  --measure: 34rem;
+  --gutter: clamp(16px, 4vw, 48px);
 }
 
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
+@media (prefers-color-scheme: dark) {
+  :root {
+    --cyc: #1d242b;
+    --surface: #262e36;
+    --ink: #e8edf0;
+    --steel: #a3afba;
+    --rule: #3b4651;
+    --slot-empty: #6d7a86;
+    --tape-camera: #e9b81f;
+    --tape-audio: #6fa3e8;
+    --focus: #8bb8ff;
+    --error: #ffb4aa;
+    --error-bg: #3d2522;
   }
 }
 
-.App-header {
-  background-color: #282c34;
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background: var(--cyc);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 1.0625rem;
+  line-height: 1.55;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  font-stretch: 75%;
+  line-height: 1.05;
+}
+
+p {
+  margin: 0;
+}
+
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* ---------- Buttons ---------- */
+
+button {
+  font: inherit;
+  cursor: pointer;
+}
+
+.button-primary,
+.button-quiet {
+  padding: 0.7rem 1.25rem;
+  border-radius: 4px;
+  font-weight: 650;
+  font-stretch: 90%;
+}
+
+.button-primary {
+  background: var(--ink);
+  color: var(--cyc);
+  border: 2px solid var(--ink);
+}
+
+.button-primary:hover:not(:disabled) {
+  background: transparent;
+  color: var(--ink);
+}
+
+.button-quiet {
+  background: transparent;
+  color: var(--ink);
+  border: 2px solid var(--ink);
+}
+
+.button-quiet:hover {
+  background: var(--surface);
+}
+
+.button-primary:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.button-link {
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font-weight: 650;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* ---------- Header and footer ---------- */
+
+.page {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+}
+
+.site-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px var(--gutter);
+}
+
+.wordmark {
+  color: var(--ink);
+  text-decoration: none;
+  font-weight: 800;
+  font-stretch: 70%;
+  font-size: 1.35rem;
+  letter-spacing: 0.01em;
+}
+
+.session {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 0.95rem;
+}
+
+main {
+  flex: 1;
+}
+
+.site-footer {
+  padding: 32px var(--gutter);
+  border-top: 1px solid var(--rule);
+  color: var(--steel);
+  font-size: 0.9rem;
+}
+
+/* ---------- Hero ---------- */
+
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+  gap: clamp(32px, 6vw, 88px);
+  align-items: center;
+  padding: clamp(32px, 7vw, 96px) var(--gutter) clamp(48px, 8vw, 112px);
+}
+
+.hero h1 {
+  font-size: clamp(2.6rem, 6.2vw, 4.75rem);
+  font-weight: 850;
+  font-stretch: 68%;
+  line-height: 0.98;
+  letter-spacing: -0.005em;
+  max-width: 12ch;
+}
+
+.lede {
+  margin-top: 24px;
+  max-width: var(--measure);
+  font-size: 1.15rem;
+  color: var(--steel);
+}
+
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 32px;
+}
+
+.signed-in-note {
+  margin-top: 32px;
+  max-width: var(--measure);
+  padding-left: 14px;
+  border-left: 4px solid var(--tape-camera);
+}
+
+/* ---------- Spike tape ---------- */
+
+/* A strip of tape with torn ends, written on in marker. */
+.tape {
+  display: inline-block;
+  padding: 0.3rem 1.1rem 0.25rem;
+  font-family: var(--font-marker);
+  font-weight: 400;
+  font-stretch: normal;
+  font-size: 1.1rem;
+  line-height: 1.2;
+  color: var(--tape-ink);
+  background: var(--tape-color);
+  transform: rotate(-1.2deg);
+  clip-path: polygon(
+    0 8%, 3% 0, 6% 10%, 9% 2%, 91% 0, 94% 9%, 97% 1%, 100% 7%,
+    100% 92%, 97% 100%, 94% 90%, 91% 98%, 9% 100%, 6% 91%, 3% 99%, 0 93%
+  );
+}
+
+.tape-HWSet1 {
+  --tape-color: var(--tape-camera);
+}
+
+.tape-HWSet2 {
+  --tape-color: var(--tape-audio);
+}
+
+.tape-HWSet2 .tape {
+  transform: rotate(0.8deg);
+}
+
+/* ---------- Shelf board ---------- */
+
+.shelf {
+  margin: 0;
+  padding: clamp(20px, 3vw, 36px);
+  background: var(--surface);
+  border: 2px solid var(--ink);
+  border-radius: 6px;
+}
+
+.shelf-row + .shelf-row {
+  margin-top: 28px;
+  padding-top: 28px;
+  border-top: 1px solid var(--rule);
+}
+
+.slots {
+  display: grid;
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 16px;
+}
+
+.slot {
+  aspect-ratio: 3 / 4;
+  border: 2px dashed var(--slot-empty);
+  border-radius: 3px;
+}
+
+.slot-full {
+  border: 2px solid var(--ink);
+  background: var(--tape-color);
+}
+
+.shelf-count {
+  margin-top: 12px;
+  color: var(--steel);
+}
+
+.shelf-count strong {
+  color: var(--ink);
+  font-size: 1.35rem;
+  font-weight: 800;
+  font-stretch: 75%;
+}
+
+.shelf-caption {
+  margin-top: 24px;
+  font-size: 0.85rem;
+  color: var(--steel);
+}
+
+.shelf-loading {
+  color: var(--steel);
+}
+
+/* The page's one bit of motion: kits drop onto the shelf when it loads. */
+@media (prefers-reduced-motion: no-preference) {
+  .slot-full {
+    animation: shelve 360ms cubic-bezier(0.2, 0.8, 0.3, 1.2) both;
+    animation-delay: calc(var(--i) * 45ms + 120ms);
+  }
+
+  @keyframes shelve {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+  }
+}
+
+/* ---------- How borrowing works ---------- */
+
+.steps,
+.kits {
+  padding: clamp(48px, 7vw, 88px) var(--gutter);
+  border-top: 1px solid var(--rule);
+}
+
+.steps h2,
+.kits h2 {
+  font-size: clamp(1.75rem, 3.2vw, 2.4rem);
+  font-weight: 800;
+}
+
+.step-list {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 32px;
+  margin: 40px 0 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: step;
+}
+
+.step-list li {
+  counter-increment: step;
+  padding-top: 16px;
+  border-top: 3px solid var(--ink);
+}
+
+.step-list li::before {
+  content: counter(step);
+  display: block;
+  margin-bottom: 10px;
+  font-size: 2rem;
+  font-weight: 850;
+  font-stretch: 68%;
+  line-height: 1;
+}
+
+.step-list h3 {
+  font-size: 1.25rem;
+  font-weight: 750;
+}
+
+.step-list p {
+  margin-top: 8px;
+  color: var(--steel);
+  max-width: 28ch;
+}
+
+/* ---------- What's in each kit ---------- */
+
+.kit-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(32px, 6vw, 88px);
+  margin-top: 40px;
+}
+
+.kit ul {
+  margin: 20px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.kit li {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+/* ---------- Dialog ---------- */
+
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  display: flex;
   align-items: center;
   justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
+  padding: 16px;
+  background: rgba(23, 32, 42, 0.55);
 }
 
-.App-link {
-  color: #61dafb;
+.dialog {
+  width: 100%;
+  max-width: 400px;
+  padding: 28px;
+  background: var(--surface);
+  color: var(--ink);
+  border: 2px solid var(--ink);
+  border-radius: 6px;
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
+.dialog h2 {
+  font-size: 1.75rem;
+  font-weight: 800;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.form input {
+  font: inherit;
+  font-weight: 400;
+  padding: 0.6rem 0.75rem;
+  color: var(--ink);
+  background: var(--cyc);
+  border: 2px solid var(--rule);
+  border-radius: 4px;
+}
+
+.form input:focus-visible {
+  border-color: var(--focus);
+  outline: none;
+}
+
+.form-error {
+  padding: 10px 12px;
+  border-radius: 4px;
+  color: var(--error);
+  background: var(--error-bg);
+  font-size: 0.95rem;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.dialog-switch {
+  margin-top: 20px;
+  font-size: 0.95rem;
+  color: var(--steel);
+}
+
+/* ---------- Narrow screens ---------- */
+
+@media (max-width: 900px) {
+  .hero {
+    grid-template-columns: minmax(0, 1fr);
   }
-  to {
-    transform: rotate(360deg);
+
+  .step-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .step-list,
+  .kit-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .slots {
+    gap: 4px;
+  }
+
+  .session span {
+    display: none;
   }
 }
