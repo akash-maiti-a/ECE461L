@@ -17,6 +17,12 @@ def init_db(app):
     create_app().
     """
     global _client, _db
+    if app.config.get("USE_MOCK_DB"):
+        import mongomock
+
+        _client = mongomock.MongoClient()
+        _db = _client["haas_db"]
+        return _db
     mongo_uri = app.config["MONGO_URI"]
     _client = MongoClient(mongo_uri)
     _db = _client.get_default_database()

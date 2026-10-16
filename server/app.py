@@ -1,7 +1,8 @@
 """Flask application entry point.
 
 Run locally with:  python app.py
-(requires a Mongo instance reachable at MONGO_URI, see .env.example)
+(requires a Mongo instance reachable at MONGO_URI, see .env.example,
+or USE_MOCK_DB=1 for an in-memory database)
 """
 
 from flask import Flask
@@ -43,4 +44,4 @@ def create_app(config_class=Config):
 
 if __name__ == "__main__":
     app = create_app()
-    app.run(debug=True, port=5000)
+    app.run(debug=True, port=app.config["PORT"])

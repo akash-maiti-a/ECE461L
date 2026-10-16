@@ -1,5 +1,10 @@
 import os
 
+from dotenv import load_dotenv
+
+# Pull settings from server/.env if present (see .env.example).
+load_dotenv()
+
 
 class Config:
     """App configuration, pulled from environment variables.
@@ -11,3 +16,8 @@ class Config:
 
     MONGO_URI = os.environ.get("MONGO_URI", "mongodb://localhost:27017/haas_db")
     SECRET_KEY = os.environ.get("SECRET_KEY", "dev-secret-key")
+    # Port 5000 is taken by AirPlay Receiver on recent macOS, so default to 5001.
+    PORT = int(os.environ.get("PORT", "5001"))
+    # Set USE_MOCK_DB=1 to run against an in-memory database (no MongoDB
+    # install needed). Data is lost when the server stops.
+    USE_MOCK_DB = os.environ.get("USE_MOCK_DB") == "1"
