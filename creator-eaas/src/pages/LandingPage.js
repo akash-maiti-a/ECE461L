@@ -23,7 +23,7 @@ const STEPS = [
 
 // The public front page: what the service is, the live shelf, how
 // borrowing works, and what's in each kit.
-function LandingPage({ userid, onCreateAccount, onSignIn }) {
+function LandingPage({ userid, onCreateAccount, onSignIn, onOpenProjects }) {
   const [hardware, setHardware] = useState(null);
   const [hardwareFailed, setHardwareFailed] = useState(false);
 
@@ -49,10 +49,11 @@ function LandingPage({ userid, onCreateAccount, onSignIn }) {
             check kits out to your project, and bring them back when you wrap.
           </p>
           {userid ? (
-            <p className="signed-in-note" role="status">
-              You’re signed in as {userid}. Projects and checkout are the next screens we’re
-              building.
-            </p>
+            <div className="hero-actions">
+              <button className="button-primary" onClick={onOpenProjects}>
+                Open a project
+              </button>
+            </div>
           ) : (
             <div className="hero-actions">
               <button className="button-primary" onClick={onCreateAccount}>

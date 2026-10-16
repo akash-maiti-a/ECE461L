@@ -197,13 +197,6 @@ main {
   margin-top: 32px;
 }
 
-.signed-in-note {
-  margin-top: 32px;
-  max-width: var(--measure);
-  padding-left: 14px;
-  border-left: 4px solid var(--tape-camera);
-}
-
 /* ---------- Spike tape ---------- */
 
 /* A strip of tape with torn ends, written on in marker. */
@@ -235,6 +228,16 @@ main {
 /* A neutral strip for notes about the shelf itself, not a hardware set. */
 .tape-note {
   --tape-color: var(--tape-note);
+}
+
+/* Project IDs are typed by people joining a project, so they're written in
+   Archivo: Permanent Marker draws lowercase as small caps, which would make
+   "film-01" look like "FILM-01". */
+.tape.tape-id {
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-stretch: 90%;
+  letter-spacing: 0.02em;
 }
 
 .tape-HWSet2 .tape {
@@ -390,6 +393,77 @@ main {
   border-bottom: 1px solid var(--rule);
 }
 
+/* ---------- Inner pages ---------- */
+
+.page-section {
+  padding: clamp(32px, 6vw, 72px) var(--gutter) clamp(48px, 8vw, 96px);
+}
+
+.page-title {
+  font-size: clamp(2.2rem, 5vw, 3.5rem);
+  font-weight: 850;
+  font-stretch: 68%;
+  line-height: 1;
+}
+
+.page-section .lede {
+  margin-top: 16px;
+}
+
+/* Two alternative forms, split by a rule rather than boxed as cards. */
+.picker {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  margin-top: 48px;
+  max-width: 960px;
+}
+
+/* Scoped under .picker so these beat the shared .form rules defined later. */
+.picker .picker-option {
+  margin-top: 0;
+  padding-right: clamp(24px, 5vw, 64px);
+}
+
+.picker-option + .picker-option {
+  padding-right: 0;
+  padding-left: clamp(24px, 5vw, 64px);
+  border-left: 2px solid var(--ink);
+}
+
+.picker-option h2 {
+  font-size: 1.6rem;
+  font-weight: 800;
+}
+
+/* Fields on the page background need the lighter surface to stand out. */
+.picker .picker-option input,
+.picker .picker-option textarea {
+  background: var(--surface);
+}
+
+.field-hint {
+  margin-top: -8px;
+  font-size: 0.9rem;
+  color: var(--steel);
+}
+
+.back-link {
+  margin-bottom: 24px;
+}
+
+.project-heading {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+}
+
+.project-owner {
+  margin-top: 8px;
+  color: var(--steel);
+  font-size: 0.95rem;
+}
+
 /* ---------- Dialog ---------- */
 
 .dialog-backdrop {
@@ -432,7 +506,8 @@ main {
   font-weight: 600;
 }
 
-.form input {
+.form input,
+.form textarea {
   font: inherit;
   font-weight: 400;
   padding: 0.6rem 0.75rem;
@@ -442,7 +517,12 @@ main {
   border-radius: 4px;
 }
 
-.form input:focus-visible {
+.form textarea {
+  resize: vertical;
+}
+
+.form input:focus-visible,
+.form textarea:focus-visible {
   border-color: var(--focus);
   outline: none;
 }
@@ -477,6 +557,24 @@ main {
 
   .step-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .picker {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 40px;
+  }
+
+  .picker-option,
+  .picker-option + .picker-option {
+    padding: 0;
+    border-left: none;
+  }
+
+  .picker-option + .picker-option {
+    padding-top: 40px;
+    border-top: 2px solid var(--ink);
   }
 }
 

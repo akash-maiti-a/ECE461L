@@ -39,6 +39,29 @@ function submitDialog(buttonName) {
   fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: buttonName }));
 }
 
+const PROJECT = {
+  projectId: 'film-01',
+  name: 'Spring short film',
+  description: 'Five-minute short for the showcase.',
+  ownerUserid: 'alice',
+  checkedOut: {},
+};
+
+// Signs in as alice and waits for the project picker.
+async function signInToProjects() {
+  api.signIn.mockResolvedValue({ userid: 'alice' });
+  await renderApp();
+  openSignIn();
+  fillIn('User ID', 'alice');
+  fillIn('Password', 'pw-123');
+  submitDialog('Sign in');
+  await screen.findByRole('heading', { name: 'Open a project', level: 1 });
+}
+
+function form(name) {
+  return screen.getByRole('form', { name });
+}
+
 test('shelf board shows kit counts from the API', async () => {
   const shelf = await renderApp();
   expect(shelf).toHaveTextContent('7 of 10 on the shelf');
@@ -60,7 +83,7 @@ test('when the shelf count fails to load, Try again loads it', async () => {
   expect(api.getHardware).toHaveBeenCalledTimes(2);
 });
 
-test('signing in shows who is signed in', async () => {
+test('signing in opens the project picker', async () => {
   api.signIn.mockResolvedValue({ userid: 'alice' });
   await renderApp();
 
@@ -69,7 +92,8 @@ test('signing in shows who is signed in', async () => {
   fillIn('Password', 'pw-123');
   submitDialog('Sign in');
 
-  expect(await screen.findByRole('status')).toHaveTextContent('signed in as alice');
+  expect(await screen.findByRole('heading', { name: 'Open a project', level: 1 })).toBeInTheDocument();
+  expect(screen.getByRole('banner')).toHaveTextContent('Signed in as alice');
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   expect(api.signIn).toHaveBeenCalledWith('alice', 'pw-123');
 });
@@ -97,7 +121,8 @@ test('creating an account signs the new user in', async () => {
   fillIn('Confirm password', 'pw-123');
   submitDialog('Create an account');
 
-  expect(await screen.findByRole('status')).toHaveTextContent('signed in as new-crew');
+  expect(await screen.findByRole('heading', { name: 'Open a project', level: 1 })).toBeInTheDocument();
+  expect(screen.getByRole('banner')).toHaveTextContent('Signed in as new-crew');
   expect(api.signUp).toHaveBeenCalledWith('new-crew', 'pw-123');
 });
 
@@ -123,4 +148,55 @@ test('the dialog switches between sign in and new user', async () => {
 
   fireEvent.click(within(dialog).getByRole('button', { name: 'Create an account' }));
   expect(within(dialog).getByLabelText('Confirm password')).toBeInTheDocument();
+});
+
+test('creating a project opens it', async () => {
+  api.createProject.mockResolvedValue(PROJECT);
+  await signInToProjects();
+
+  const create = form('Start a new project');
+  fireEvent.change(within(create).getByLabelText('Project name'), { target: { value: 'Spring short film' } });
+  fireEvent.change(within(create).getByLabelText('Description'), { target: { value: 'Five-minute short for the showcase.' } });
+  fireEvent.change(within(create).getByLabelText('Project ID'), { target: { value: ' film-01 ' } });
+  fireEvent.click(within(create).getByRole('button', { name: 'Create project' }));
+
+  expect(await screen.findByRole('heading', { name: 'Spring short film' })).toBeInTheDocument();
+  expect(api.createProject).toHaveBeenCalledWith({
+    projectId: 'film-01',
+    name: 'Spring short film',
+    description: 'Five-minute short for the showcase.',
+    ownerUserid: 'alice',
+  });
+});
+
+test('joining a project by ID opens it', async () => {
+  api.getProject.mockResolvedValue(PROJECT);
+  await signInToProjects();
+
+  const join = form('Join a project');
+  fireEvent.change(within(join).getByLabelText('Project ID'), { target: { value: 'film-01' } });
+  fireEvent.click(within(join).getByRole('button', { name: 'Open project' }));
+
+  expect(await screen.findByRole('heading', { name: 'Spring short film' })).toBeInTheDocument();
+  expect(api.getProject).toHaveBeenCalledWith('film-01');
+});
+
+test('joining an unknown project shows the server’s message', async () => {
+  api.getProject.mockRejectedValue(new Error('No project has the ID "nope".'));
+  await signInToProjects();
+
+  const join = form('Join a project');
+  fireEvent.change(within(join).getByLabelText('Project ID'), { target: { value: 'nope' } });
+  fireEvent.click(within(join).getByRole('button', { name: 'Open project' }));
+
+  expect(await within(join).findByRole('alert')).toHaveTextContent('No project has the ID "nope".');
+});
+
+test('signing out returns to the landing page', async () => {
+  await signInToProjects();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Sign out' }));
+
+  expect(await screen.findByRole('heading', { name: /Camera, audio, and lighting kits/ })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Create an account' })).toBeInTheDocument();
 });
