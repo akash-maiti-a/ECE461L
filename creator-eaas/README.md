@@ -1,70 +1,66 @@
-# Getting Started with Create React App
+# Frontend (React)
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+The Creator EaaS web page. It gets all of its data from the Flask API in
+`../server`.
 
-## Available Scripts
+## Run
 
-In the project directory, you can run:
+Start the API first, in its own terminal. See `../server/README.md` for
+setup. `USE_MOCK_DB=1` runs it without installing MongoDB:
 
-### `npm start`
+```bash
+cd server
+USE_MOCK_DB=1 .venv/bin/python app.py
+```
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+Then start the page:
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+```bash
+cd creator-eaas
+npm install
+npm start
+```
 
-### `npm test`
+Open http://localhost:3000. The dev server forwards every `/api/...` request
+to Flask on port 5001 (the `proxy` setting in `package.json`).
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+If the shelf says "Count unavailable", the API isn't running. The browser
+console says which request failed.
 
-### `npm run build`
+## Test
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+```bash
+npm test
+```
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+The tests don't need the API running:
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+- `src/App.test.js` replaces `src/api` with Jest mocks and checks what the
+  page shows for each kind of reply.
+- `src/api/index.test.js` replaces `fetch` and checks the exact request
+  each API function sends, plus how errors are reported.
 
-### `npm run eject`
+## How it's organized
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+| File | Job |
+|---|---|
+| `src/api/index.js` | The only code that talks to the backend. One function per endpoint. |
+| `src/App.js` | The shell: header, footer, sign-in dialog. Tracks who's signed in, which page is showing, and the open project. |
+| `src/pages/LandingPage.js` | The front page: hero with the live shelf, how borrowing works, kit contents. |
+| `src/pages/ProjectsPage.js` | Start a new project or join one by ID. |
+| `src/pages/ProjectPage.js` | One project: its shelf per kit, and check-out and check-in controls. |
+| `src/components/ShelfBoard.js` | The shelf drawing (`Slots`), the landing page's shelf board, and the "Count unavailable" state. |
+| `src/components/AuthDialog.js` | The sign-in and new-user dialog. |
+| `src/useSessionState.js` | Keeps sign-in and the current page across a refresh (per browser tab). |
+| `src/App.css` | All styles. Colors and fonts are variables at the top, with a dark-mode set. |
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+## Deploying
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+Build with the backend's public URL so the page knows where to send requests:
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+```bash
+REACT_APP_API_URL=https://your-api.example.com npm run build
+```
 
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+The `build/` folder can then be served by any static host, such as Vercel or
+Netlify.
