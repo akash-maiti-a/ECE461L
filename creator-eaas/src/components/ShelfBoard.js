@@ -37,19 +37,10 @@ function ShelfUnavailable({ onRetry }) {
 }
 
 function ShelfRow({ set }) {
-  const slots = Array.from({ length: set.capacity }, (_, i) => i < set.available);
   return (
     <div className={`shelf-row tape-${set.setId}`}>
       <span className="tape">{set.name}</span>
-      <div className="slots" aria-hidden="true">
-        {slots.map((onShelf, i) => (
-          <span
-            key={i}
-            className={onShelf ? 'slot slot-full' : 'slot'}
-            style={{ '--i': i }}
-          />
-        ))}
-      </div>
+      <Slots capacity={set.capacity} available={set.available} />
       <p className="shelf-count">
         <strong>{set.available}</strong> of {set.capacity} on the shelf
       </p>
@@ -57,4 +48,23 @@ function ShelfRow({ set }) {
   );
 }
 
+// One slot per kit, in order: on the shelf, then with this project (if
+// `yours` is given), then with other projects. Decorative only; the counts
+// next to it are what screen readers read.
+export function Slots({ capacity, available, yours = 0 }) {
+  const slots = Array.from({ length: capacity }, (_, i) => {
+    if (i < available) return 'slot slot-full';
+    if (i < available + yours) return 'slot slot-yours';
+    return 'slot';
+  });
+  return (
+    <div className="slots" aria-hidden="true">
+      {slots.map((className, i) => (
+        <span key={i} className={className} style={{ '--i': i }} />
+      ))}
+    </div>
+  );
+}
+
+export { ShelfUnavailable };
 export default ShelfBoard;

@@ -200,3 +200,51 @@ test('signing out returns to the landing page', async () => {
   expect(await screen.findByRole('heading', { name: /Camera, audio, and lighting kits/ })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Create an account' })).toBeInTheDocument();
 });
+
+// Signs in, joins film-01, and waits for its shelf to load.
+async function openFilmProject(project = PROJECT) {
+  api.getProject.mockResolvedValue(project);
+  await signInToProjects();
+  const join = form('Join a project');
+  fireEvent.change(within(join).getByLabelText('Project ID'), { target: { value: project.projectId } });
+  fireEvent.click(within(join).getByRole('button', { name: 'Open project' }));
+  const shelf = await screen.findByRole('figure', { name: 'Kits for this project' });
+  await within(shelf).findByText('Camera kits');
+  return shelf;
+}
+
+test('the project page shows what is on the shelf and what this project has', async () => {
+  const shelf = await openFilmProject({ ...PROJECT, checkedOut: { HWSet1: 3 } });
+
+  const camera = within(shelf).getByText('Camera kits').closest('.shelf-row');
+  expect(camera).toHaveTextContent('7 of 10 on the shelf');
+  expect(camera).toHaveTextContent('3 with this project');
+  const audio = within(shelf).getByText('Audio and lighting kits').closest('.shelf-row');
+  expect(audio).toHaveTextContent('0 with this project');
+
+  // Re-fetches the project so the tally is current, not the picker's copy.
+  expect(api.getProject).toHaveBeenLastCalledWith('film-01');
+});
+
+test('the project page offers Try again when its data fails to load', async () => {
+  api.getProject.mockResolvedValueOnce(PROJECT).mockRejectedValueOnce(new Error('down'));
+  await signInToProjects();
+  const join = form('Join a project');
+  fireEvent.change(within(join).getByLabelText('Project ID'), { target: { value: 'film-01' } });
+  fireEvent.click(within(join).getByRole('button', { name: 'Open project' }));
+
+  expect(await screen.findByRole('alert')).toHaveTextContent('kit counts can’t be shown');
+
+  api.getProject.mockResolvedValue(PROJECT);
+  fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+  const shelf = await screen.findByRole('figure', { name: 'Kits for this project' });
+  expect(await within(shelf).findByText('Camera kits')).toBeInTheDocument();
+});
+
+test('Back to projects returns to the picker', async () => {
+  await openFilmProject();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Back to projects' }));
+
+  expect(await screen.findByRole('heading', { name: 'Open a project', level: 1 })).toBeInTheDocument();
+});
