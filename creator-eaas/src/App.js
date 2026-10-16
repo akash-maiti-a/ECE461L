@@ -4,6 +4,7 @@ import AuthDialog from './components/AuthDialog';
 import LandingPage from './pages/LandingPage';
 import ProjectPage from './pages/ProjectPage';
 import ProjectsPage from './pages/ProjectsPage';
+import useSessionState from './useSessionState';
 
 const TEAM = 'Kavi Daliparti, Akash Maiti, Shreyas Kumar, Saharsh Lavu, and Sanjay Senthil';
 
@@ -11,9 +12,11 @@ const TEAM = 'Kavi Daliparti, Akash Maiti, Shreyas Kumar, Saharsh Lavu, and Sanj
 // showing. App owns who is signed in, which page is showing, and which
 // project is open; each page owns its own data.
 function App() {
-  const [userid, setUserid] = useState(null);
-  const [view, setView] = useState('home'); // 'home' | 'projects' | 'project'
-  const [project, setProject] = useState(null);
+  // Kept in sessionStorage so a refresh doesn't sign you out or lose your
+  // place (see useSessionState.js).
+  const [userid, setUserid] = useSessionState('userid', null);
+  const [view, setView] = useSessionState('view', 'home'); // 'home' | 'projects' | 'project'
+  const [project, setProject] = useSessionState('project', null);
   const [dialogMode, setDialogMode] = useState(null); // 'signin' | 'signup' | null
 
   const closeDialog = useCallback(() => setDialogMode(null), []);

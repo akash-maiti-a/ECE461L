@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import App from './App';
 import * as api from './api';
 
@@ -16,6 +16,8 @@ const HARDWARE = [
 // responses here rather than once at the top.
 beforeEach(() => {
   api.getHardware.mockResolvedValue(HARDWARE);
+  // The app remembers who's signed in for the tab; start every test fresh.
+  window.sessionStorage.clear();
 });
 
 // Renders the page and waits for the shelf to load, so no state updates
@@ -319,4 +321,28 @@ test('Check in is disabled when this project has none of that kit', async () => 
 
   expect(within(kitRow(shelf, 'Camera kits')).getByRole('button', { name: 'Check in' })).toBeEnabled();
   expect(within(kitRow(shelf, 'Audio and lighting kits')).getByRole('button', { name: 'Check in' })).toBeDisabled();
+});
+
+test('a page refresh keeps you signed in on the same project', async () => {
+  await openFilmProject();
+  cleanup(); // Like closing the page; sessionStorage survives a refresh.
+
+  api.getProject.mockResolvedValue(PROJECT);
+  render(<App />);
+
+  expect(await screen.findByRole('heading', { name: 'Spring short film', level: 1 })).toBeInTheDocument();
+  expect(screen.getByRole('banner')).toHaveTextContent('Signed in as alice');
+  const shelf = screen.getByRole('figure', { name: 'Kits for this project' });
+  await within(shelf).findByText('Camera kits');
+});
+
+test('signing out forgets the session', async () => {
+  await signInToProjects();
+  fireEvent.click(screen.getByRole('button', { name: 'Sign out' }));
+  cleanup();
+
+  await renderApp();
+
+  expect(screen.getByRole('button', { name: 'Create an account' })).toBeInTheDocument();
+  expect(window.sessionStorage.getItem('creator-eaas:userid')).toBeNull();
 });
