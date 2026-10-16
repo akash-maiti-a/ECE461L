@@ -27,15 +27,21 @@ const TEAM = 'Kavi Daliparti, Akash Maiti, Shreyas Kumar, Saharsh Lavu, and Sanj
 
 function App() {
   const [hardware, setHardware] = useState(null);
-  const [hardwareError, setHardwareError] = useState('');
+  const [hardwareFailed, setHardwareFailed] = useState(false);
   const [userid, setUserid] = useState(null);
   const [dialogMode, setDialogMode] = useState(null); // 'signin' | 'signup' | null
 
-  useEffect(() => {
+  const loadHardware = useCallback(() => {
+    setHardwareFailed(false);
+    setHardware(null);
     getHardware()
       .then(setHardware)
-      .catch(() => setHardwareError('The shelf count didn’t load. Refresh the page to try again.'));
+      .catch(() => setHardwareFailed(true));
   }, []);
+
+  useEffect(() => {
+    loadHardware();
+  }, [loadHardware]);
 
   const closeDialog = useCallback(() => setDialogMode(null), []);
 
@@ -90,13 +96,7 @@ function App() {
               </div>
             )}
           </div>
-          {hardwareError ? (
-            <p className="form-error" role="alert">
-              {hardwareError}
-            </p>
-          ) : (
-            <ShelfBoard hardware={hardware} />
-          )}
+          <ShelfBoard hardware={hardware} failed={hardwareFailed} onRetry={loadHardware} />
         </section>
 
         <section className="steps" aria-labelledby="steps-title">

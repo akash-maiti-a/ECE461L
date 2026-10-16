@@ -11,6 +11,7 @@
   --slot-empty: #9aa6b0;
   --tape-camera: #f4c430;
   --tape-audio: #79aef2;
+  --tape-note: #b8c2ca;
   --tape-ink: #17202a;
   --focus: #1f5fc4;
   --error: #a3261b;
@@ -33,6 +34,7 @@
     --slot-empty: #6d7a86;
     --tape-camera: #e9b81f;
     --tape-audio: #6fa3e8;
+    --tape-note: #8794a0;
     --focus: #8bb8ff;
     --error: #ffb4aa;
     --error-bg: #3d2522;
@@ -230,6 +232,11 @@ main {
   --tape-color: var(--tape-audio);
 }
 
+/* A neutral strip for notes about the shelf itself, not a hardware set. */
+.tape-note {
+  --tape-color: var(--tape-note);
+}
+
 .tape-HWSet2 .tape {
   transform: rotate(0.8deg);
 }
@@ -288,6 +295,13 @@ main {
 
 .shelf-loading {
   color: var(--steel);
+}
+
+.shelf-unavailable {
+  margin: 20px 0 24px;
+  max-width: 32ch;
+  font-size: 1.15rem;
+  line-height: 1.45;
 }
 
 /* The page's one bit of motion: kits drop onto the shelf when it loads. */

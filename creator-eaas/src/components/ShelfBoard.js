@@ -1,7 +1,10 @@
 // The hero's shelf board: one slot per kit. A filled slot is a kit on the
 // shelf; an outlined slot is a kit that's checked out. Each set gets its own
 // spike-tape color, the way gear rooms label shelves.
-function ShelfBoard({ hardware }) {
+function ShelfBoard({ hardware, failed, onRetry }) {
+  if (failed) {
+    return <ShelfUnavailable onRetry={onRetry} />;
+  }
   return (
     <figure className="shelf" aria-label="Kits on the shelf right now">
       {hardware ? (
@@ -12,6 +15,23 @@ function ShelfBoard({ hardware }) {
       <figcaption className="shelf-caption">
         Filled slots are on the shelf. Outlined slots are checked out.
       </figcaption>
+    </figure>
+  );
+}
+
+// Shown when the counts can't be loaded. It deliberately draws no slots:
+// outlined slots mean "checked out", so empty ones would claim every kit
+// is gone. A gray note on the shelf says what happened instead.
+function ShelfUnavailable({ onRetry }) {
+  return (
+    <figure className="shelf" aria-label="Kits on the shelf right now">
+      <span className="tape tape-note">Count unavailable</span>
+      <p className="shelf-unavailable" role="alert">
+        The equipment server didn’t answer, so kit counts can’t be shown right now.
+      </p>
+      <button className="button-quiet" onClick={onRetry}>
+        Try again
+      </button>
     </figure>
   );
 }

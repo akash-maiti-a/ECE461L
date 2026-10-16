@@ -45,11 +45,19 @@ test('shelf board shows kit counts from the API', async () => {
   expect(shelf).toHaveTextContent('8 of 8 on the shelf');
 });
 
-test('shows a message when the shelf count fails to load', async () => {
-  api.getHardware.mockRejectedValue(new Error('Could not reach the server.'));
+test('when the shelf count fails to load, Try again loads it', async () => {
+  api.getHardware.mockRejectedValueOnce(new Error('The server isn’t responding right now.'));
   render(<App />);
 
-  expect(await screen.findByRole('alert')).toHaveTextContent('The shelf count didn’t load.');
+  expect(await screen.findByRole('alert')).toHaveTextContent('kit counts can’t be shown right now');
+
+  fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+
+  const shelf = screen.getByRole('figure', { name: 'Kits on the shelf right now' });
+  await within(shelf).findByText('Camera kits');
+  expect(shelf).toHaveTextContent('7 of 10 on the shelf');
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  expect(api.getHardware).toHaveBeenCalledTimes(2);
 });
 
 test('signing in shows who is signed in', async () => {

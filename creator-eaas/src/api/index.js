@@ -21,8 +21,20 @@ async function request(path, options = {}) {
     throw new Error('Can’t reach the server. Check your connection and try again.');
   }
 
+  // Every reply from our Flask code is JSON. A reply that isn't came from
+  // something in between (the dev proxy when Flask is stopped, a hosting
+  // gateway, or a crash page), so the API itself isn't answering.
+  let data;
+  try {
+    data = await response.json();
+  } catch {
+    if (process.env.NODE_ENV === 'development') {
+      console.error(`${path} returned a non-JSON reply. Is the Flask API running on port 5001?`);
+    }
+    throw new Error('The server isn’t responding right now. Try again in a minute.');
+  }
+
   // Errors from Flask look like {"error": "..."}; pass that message along.
-  const data = await response.json().catch(() => ({}));
   if (!response.ok) {
     throw new Error(data.error || `Something went wrong (error ${response.status}). Try again.`);
   }

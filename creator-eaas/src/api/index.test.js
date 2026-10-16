@@ -100,6 +100,15 @@ describe('errors', () => {
     await expect(getHardware()).rejects.toThrow('Something went wrong (error 500). Try again.');
   });
 
+  test('explains when the reply isn’t JSON, like the dev proxy with Flask stopped', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: false,
+      status: 500,
+      json: () => Promise.reject(new SyntaxError('Unexpected token P')),
+    });
+    await expect(signIn('alice', 'pw')).rejects.toThrow('The server isn’t responding right now.');
+  });
+
   test('explains when the server can’t be reached', async () => {
     global.fetch = jest.fn().mockRejectedValue(new TypeError('Failed to fetch'));
     await expect(getHardware()).rejects.toThrow('Can’t reach the server.');
