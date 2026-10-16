@@ -33,11 +33,12 @@ def test_create_and_get_project(client):
     }
     create = client.post("/api/projects", json=body)
     assert create.status_code == 201
-    assert create.get_json() == body
+    # New projects start with nothing checked out.
+    assert create.get_json() == {**body, "checkedOut": {}}
 
     get = client.get("/api/projects/proj-1")
     assert get.status_code == 200
-    assert get.get_json() == body
+    assert get.get_json() == {**body, "checkedOut": {}}
 
 
 def test_create_project_duplicate_id_rejected(client):

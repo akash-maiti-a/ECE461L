@@ -89,15 +89,12 @@ class Hardware:
 
     @staticmethod
     def checkin(db, set_id, quantity):
-        """Increment `available` by quantity, capped at capacity so a
-        bad check-in request can't push availability above the total
-        the service owns. Returns True if the set exists.
+        """Put `quantity` kits back on the shelf.
+
+        Callers must first confirm the project actually has that many out
+        (Project.remove_checked_out). That check is what keeps `available`
+        from ever exceeding `capacity`, so no cap is needed here.
         """
-        hw = db[Hardware.collection_name].find_one({"setId": set_id})
-        if not hw:
-            return False
-        new_available = min(hw["capacity"], hw["available"] + quantity)
         db[Hardware.collection_name].update_one(
-            {"setId": set_id}, {"$set": {"available": new_available}}
+            {"setId": set_id}, {"$inc": {"available": quantity}}
         )
-        return True

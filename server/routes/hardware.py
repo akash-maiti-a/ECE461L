@@ -5,6 +5,7 @@ from flask import Blueprint, jsonify, request
 from extensions import get_db
 from models.checkout_record import CheckoutRecord
 from models.hardware import Hardware
+from models.project import Project
 
 hardware_bp = Blueprint("hardware", __name__, url_prefix="/api/hardware")
 
@@ -39,6 +40,9 @@ def _parse_request(db):
     if not hardware_set:
         return None, None, None, (jsonify({"error": f'Unknown hardware set "{set_id}".'}), 404)
 
+    if not Project.get(db, project_id):
+        return None, None, None, (jsonify({"error": f'No project has the ID "{project_id}".'}), 404)
+
     return project_id, hardware_set, quantity, None
 
 
@@ -58,13 +62,15 @@ def checkout():
         return error
 
     set_id = hardware_set["setId"]
+    # Take kits off the shelf first. If that fails, nothing else changes.
     if not Hardware.checkout(db, set_id, quantity):
         # Re-read so the message reflects the count at the moment it failed.
         current = Hardware.get(db, set_id)
         message = f"Only {current['available']} {current['name'].lower()} are on the shelf."
         return jsonify({"error": message}), 409
 
-    CheckoutRecord.create(db, project_id, set_id, quantity)
+    Project.add_checked_out(db, project_id, set_id, quantity)
+    CheckoutRecord.log(db, project_id, set_id, quantity, "checkout")
     return jsonify(Hardware.list_all(db)), 200
 
 
@@ -76,5 +82,17 @@ def checkin():
     if error:
         return error
 
-    Hardware.checkin(db, hardware_set["setId"], quantity)
+    set_id = hardware_set["setId"]
+    # Lower the project's tally first. If the project doesn't have that
+    # many out, nothing else changes and the shelf count stays correct.
+    if not Project.remove_checked_out(db, project_id, set_id, quantity):
+        has_out = Project.get(db, project_id).get("checkedOut", {}).get(set_id, 0)
+        message = (
+            f"This project has {has_out} {hardware_set['name'].lower()} checked out, "
+            f"so it can't check in {quantity}."
+        )
+        return jsonify({"error": message}), 409
+
+    Hardware.checkin(db, set_id, quantity)
+    CheckoutRecord.log(db, project_id, set_id, quantity, "checkin")
     return jsonify(Hardware.list_all(db)), 200

@@ -29,3 +29,23 @@ def app(monkeypatch):
 @pytest.fixture
 def client(app):
     return app.test_client()
+
+
+@pytest.fixture
+def make_project(client):
+    """Create a project through the API and return its projectId."""
+
+    def _make(project_id="proj-1"):
+        response = client.post(
+            "/api/projects",
+            json={
+                "projectId": project_id,
+                "name": f"Project {project_id}",
+                "description": "Test project",
+                "ownerUserid": "alice",
+            },
+        )
+        assert response.status_code == 201
+        return project_id
+
+    return _make

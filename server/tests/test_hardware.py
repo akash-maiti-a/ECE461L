@@ -1,4 +1,5 @@
 import extensions
+from models.checkout_record import CheckoutRecord
 from models.hardware import Hardware
 
 
@@ -6,75 +7,32 @@ def hardware_by_id(response):
     return {hw["setId"]: hw for hw in response.get_json()}
 
 
+def checkout(client, project_id, set_id, quantity):
+    return client.post(
+        "/api/hardware/checkout",
+        json={"projectId": project_id, "setId": set_id, "quantity": quantity},
+    )
+
+
+def checkin(client, project_id, set_id, quantity):
+    return client.post(
+        "/api/hardware/checkin",
+        json={"projectId": project_id, "setId": set_id, "quantity": quantity},
+    )
+
+
+def checked_out(client, project_id, set_id):
+    project = client.get(f"/api/projects/{project_id}").get_json()
+    return project["checkedOut"].get(set_id, 0)
+
+
+# ---------- Listing and seeding ----------
+
+
 def test_list_hardware_returns_seeded_sets(client):
     response = client.get("/api/hardware")
     assert response.status_code == 200
     assert set(hardware_by_id(response)) == {"HWSet1", "HWSet2"}
-
-
-def test_checkout_decrements_availability(client):
-    before = hardware_by_id(client.get("/api/hardware"))
-
-    response = client.post(
-        "/api/hardware/checkout",
-        json={"projectId": "proj-1", "setId": "HWSet1", "quantity": 2},
-    )
-
-    assert response.status_code == 200
-    after = hardware_by_id(response)
-    assert after["HWSet1"]["available"] == before["HWSet1"]["available"] - 2
-
-
-def test_checkout_rejects_insufficient_availability(client):
-    response = client.post(
-        "/api/hardware/checkout",
-        json={"projectId": "proj-1", "setId": "HWSet1", "quantity": 9999},
-    )
-    assert response.status_code == 409
-    assert response.get_json()["error"].endswith("are on the shelf.")
-
-
-def test_checkout_unknown_set_returns_404(client):
-    response = client.post(
-        "/api/hardware/checkout",
-        json={"projectId": "proj-1", "setId": "HWSet9", "quantity": 1},
-    )
-    assert response.status_code == 404
-    assert response.get_json()["error"] == 'Unknown hardware set "HWSet9".'
-
-
-def test_checkout_rejects_non_integer_quantities(client):
-    for bad_quantity in [0, -1, 1.5, "2", True, None]:
-        response = client.post(
-            "/api/hardware/checkout",
-            json={"projectId": "proj-1", "setId": "HWSet1", "quantity": bad_quantity},
-        )
-        assert response.status_code == 400, bad_quantity
-
-
-def test_checkin_restores_availability(client):
-    client.post(
-        "/api/hardware/checkout",
-        json={"projectId": "proj-1", "setId": "HWSet2", "quantity": 3},
-    )
-    response = client.post(
-        "/api/hardware/checkin",
-        json={"projectId": "proj-1", "setId": "HWSet2", "quantity": 3},
-    )
-
-    assert response.status_code == 200
-    after = hardware_by_id(response)
-    assert after["HWSet2"]["available"] == after["HWSet2"]["capacity"]
-
-
-def test_checkin_cannot_exceed_capacity(client):
-    response = client.post(
-        "/api/hardware/checkin",
-        json={"projectId": "proj-1", "setId": "HWSet1", "quantity": 999},
-    )
-    assert response.status_code == 200
-    after = hardware_by_id(response)
-    assert after["HWSet1"]["available"] == after["HWSet1"]["capacity"]
 
 
 def test_seeded_sets_match_the_landing_page(client):
@@ -89,13 +47,125 @@ def test_seeded_sets_match_the_landing_page(client):
         assert len(hw["contents"]) > 0
 
 
-def test_reseeding_keeps_live_availability(client):
-    client.post(
-        "/api/hardware/checkout",
-        json={"projectId": "proj-1", "setId": "HWSet1", "quantity": 4},
-    )
+def test_reseeding_keeps_live_availability(client, make_project):
+    project_id = make_project()
+    checkout(client, project_id, "HWSet1", 4)
+
     # Simulates the server restarting, which runs seed() again.
     Hardware.seed(extensions.get_db())
 
     hardware = hardware_by_id(client.get("/api/hardware"))
     assert hardware["HWSet1"]["available"] == 6
+
+
+# ---------- Checkout ----------
+
+
+def test_checkout_updates_shelf_and_project_tally(client, make_project):
+    project_id = make_project()
+
+    response = checkout(client, project_id, "HWSet1", 2)
+
+    assert response.status_code == 200
+    assert hardware_by_id(response)["HWSet1"]["available"] == 8
+    assert checked_out(client, project_id, "HWSet1") == 2
+
+
+def test_checkout_rejects_insufficient_availability(client, make_project):
+    project_id = make_project()
+
+    response = checkout(client, project_id, "HWSet1", 9999)
+
+    assert response.status_code == 409
+    assert response.get_json()["error"] == "Only 10 camera kits are on the shelf."
+    assert checked_out(client, project_id, "HWSet1") == 0
+
+
+def test_checkout_unknown_set_returns_404(client, make_project):
+    response = checkout(client, make_project(), "HWSet9", 1)
+    assert response.status_code == 404
+    assert response.get_json()["error"] == 'Unknown hardware set "HWSet9".'
+
+
+def test_checkout_unknown_project_returns_404(client):
+    response = checkout(client, "no-such-project", "HWSet1", 1)
+
+    assert response.status_code == 404
+    assert response.get_json()["error"] == 'No project has the ID "no-such-project".'
+    assert hardware_by_id(client.get("/api/hardware"))["HWSet1"]["available"] == 10
+
+
+def test_checkout_rejects_non_integer_quantities(client, make_project):
+    project_id = make_project()
+    for bad_quantity in [0, -1, 1.5, "2", True, None]:
+        response = checkout(client, project_id, "HWSet1", bad_quantity)
+        assert response.status_code == 400, bad_quantity
+
+
+# ---------- Check-in ----------
+
+
+def test_checkin_restores_shelf_and_project_tally(client, make_project):
+    project_id = make_project()
+    checkout(client, project_id, "HWSet2", 3)
+
+    response = checkin(client, project_id, "HWSet2", 3)
+
+    assert response.status_code == 200
+    assert hardware_by_id(response)["HWSet2"]["available"] == 8
+    assert checked_out(client, project_id, "HWSet2") == 0
+
+
+def test_partial_checkin(client, make_project):
+    project_id = make_project()
+    checkout(client, project_id, "HWSet1", 5)
+
+    response = checkin(client, project_id, "HWSet1", 2)
+
+    assert response.status_code == 200
+    assert hardware_by_id(response)["HWSet1"]["available"] == 7
+    assert checked_out(client, project_id, "HWSet1") == 3
+
+
+def test_cannot_check_in_more_than_borrowed(client, make_project):
+    project_id = make_project()
+    checkout(client, project_id, "HWSet1", 2)
+
+    response = checkin(client, project_id, "HWSet1", 3)
+
+    assert response.status_code == 409
+    assert response.get_json()["error"] == (
+        "This project has 2 camera kits checked out, so it can't check in 3."
+    )
+    # Nothing changed.
+    assert hardware_by_id(client.get("/api/hardware"))["HWSet1"]["available"] == 8
+    assert checked_out(client, project_id, "HWSet1") == 2
+
+
+def test_cannot_check_in_another_projects_kits(client, make_project):
+    borrower = make_project("borrower")
+    other = make_project("other")
+    checkout(client, borrower, "HWSet1", 4)
+
+    response = checkin(client, other, "HWSet1", 4)
+
+    assert response.status_code == 409
+    assert hardware_by_id(client.get("/api/hardware"))["HWSet1"]["available"] == 6
+    assert checked_out(client, borrower, "HWSet1") == 4
+
+
+# ---------- History ----------
+
+
+def test_checkouts_and_checkins_are_logged(client, make_project):
+    project_id = make_project()
+    checkout(client, project_id, "HWSet1", 2)
+    checkin(client, project_id, "HWSet1", 1)
+    checkin(client, project_id, "HWSet1", 5)  # rejected, so not logged
+
+    history = CheckoutRecord.for_project(extensions.get_db(), project_id)
+
+    assert [(h["action"], h["setId"], h["quantity"]) for h in history] == [
+        ("checkout", "HWSet1", 2),
+        ("checkin", "HWSet1", 1),
+    ]
