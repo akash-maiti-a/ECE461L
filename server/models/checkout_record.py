@@ -14,11 +14,11 @@ class CheckoutRecord:
     @staticmethod
     def create(db, project_id, set_id, quantity):
         doc = {
-            "project_id": project_id,
-            "set_id": set_id,
+            "projectId": project_id,
+            "setId": set_id,
             "quantity": quantity,
-            "checked_out_at": datetime.datetime.now(datetime.timezone.utc),
-            "checked_in_at": None,
+            "checkedOutAt": datetime.datetime.now(datetime.timezone.utc),
+            "checkedInAt": None,
         }
         db[CheckoutRecord.collection_name].insert_one(doc)
         doc.pop("_id", None)
@@ -29,7 +29,7 @@ class CheckoutRecord:
         """Checkouts for this project/set that haven't been checked back in."""
         return list(
             db[CheckoutRecord.collection_name].find(
-                {"project_id": project_id, "set_id": set_id, "checked_in_at": None},
+                {"projectId": project_id, "setId": set_id, "checkedInAt": None},
                 {"_id": 0},
             )
         )

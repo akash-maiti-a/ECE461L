@@ -10,8 +10,8 @@ class Hardware:
     collection_name = "hardware_sets"
 
     DEFAULT_SETS = [
-        {"set_id": "HWSet1", "name": "Camera Kits", "capacity": 10, "available": 10},
-        {"set_id": "HWSet2", "name": "Audio and Lighting Kits", "capacity": 10, "available": 10},
+        {"setId": "HWSet1", "name": "Camera Kits", "capacity": 10, "available": 10},
+        {"setId": "HWSet2", "name": "Audio and Lighting Kits", "capacity": 10, "available": 10},
     ]
 
     @staticmethod
@@ -23,12 +23,17 @@ class Hardware:
         collection = db[Hardware.collection_name]
         for hw in Hardware.DEFAULT_SETS:
             collection.update_one(
-                {"set_id": hw["set_id"]}, {"$setOnInsert": hw}, upsert=True
+                {"setId": hw["setId"]}, {"$setOnInsert": hw}, upsert=True
             )
 
     @staticmethod
     def list_all(db):
         return list(db[Hardware.collection_name].find({}, {"_id": 0}))
+
+    @staticmethod
+    def get(db, set_id):
+        """Fetch one hardware set by its setId, or None if it doesn't exist."""
+        return db[Hardware.collection_name].find_one({"setId": set_id}, {"_id": 0})
 
     @staticmethod
     def checkout(db, set_id, quantity):
@@ -42,7 +47,7 @@ class Hardware:
         the document still matches the filter at that instant.
         """
         result = db[Hardware.collection_name].update_one(
-            {"set_id": set_id, "available": {"$gte": quantity}},
+            {"setId": set_id, "available": {"$gte": quantity}},
             {"$inc": {"available": -quantity}},
         )
         return result.modified_count == 1
@@ -53,11 +58,11 @@ class Hardware:
         bad check-in request can't push availability above the total
         the service owns. Returns True if the set exists.
         """
-        hw = db[Hardware.collection_name].find_one({"set_id": set_id})
+        hw = db[Hardware.collection_name].find_one({"setId": set_id})
         if not hw:
             return False
         new_available = min(hw["capacity"], hw["available"] + quantity)
         db[Hardware.collection_name].update_one(
-            {"set_id": set_id}, {"$set": {"available": new_available}}
+            {"setId": set_id}, {"$set": {"available": new_available}}
         )
         return True
