@@ -45,9 +45,13 @@ The tests don't need the API running:
 | File | Job |
 |---|---|
 | `src/api/index.js` | The only code that talks to the backend. One function per endpoint. |
-| `src/App.js` | The page: header, hero, how borrowing works, kit contents. Holds who's signed in. |
-| `src/components/ShelfBoard.js` | The hero's live shelf board, including its loading and failure states. |
+| `src/App.js` | The shell: header, footer, sign-in dialog. Tracks who's signed in, which page is showing, and the open project. |
+| `src/pages/LandingPage.js` | The front page: hero with the live shelf, how borrowing works, kit contents. |
+| `src/pages/ProjectsPage.js` | Start a new project or join one by ID. |
+| `src/pages/ProjectPage.js` | One project: its shelf per kit, and check-out and check-in controls. |
+| `src/components/ShelfBoard.js` | The shelf drawing (`Slots`), the landing page's shelf board, and the "Count unavailable" state. |
 | `src/components/AuthDialog.js` | The sign-in and new-user dialog. |
+| `src/useSessionState.js` | Keeps sign-in and the current page across a refresh (per browser tab). |
 | `src/App.css` | All styles. Colors and fonts are variables at the top, with a dark-mode set. |
 
 ## Deploying
