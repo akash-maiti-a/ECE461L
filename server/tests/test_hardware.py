@@ -1,3 +1,7 @@
+import extensions
+from models.hardware import Hardware
+
+
 def hardware_by_id(response):
     return {hw["setId"]: hw for hw in response.get_json()}
 
@@ -71,3 +75,27 @@ def test_checkin_cannot_exceed_capacity(client):
     assert response.status_code == 200
     after = hardware_by_id(response)
     assert after["HWSet1"]["available"] == after["HWSet1"]["capacity"]
+
+
+def test_seeded_sets_match_the_landing_page(client):
+    hardware = hardware_by_id(client.get("/api/hardware"))
+
+    assert hardware["HWSet1"]["name"] == "Camera kits"
+    assert hardware["HWSet1"]["capacity"] == 10
+    assert hardware["HWSet2"]["name"] == "Audio and lighting kits"
+    assert hardware["HWSet2"]["capacity"] == 8
+    for hw in hardware.values():
+        assert hw["available"] == hw["capacity"]
+        assert len(hw["contents"]) > 0
+
+
+def test_reseeding_keeps_live_availability(client):
+    client.post(
+        "/api/hardware/checkout",
+        json={"projectId": "proj-1", "setId": "HWSet1", "quantity": 4},
+    )
+    # Simulates the server restarting, which runs seed() again.
+    Hardware.seed(extensions.get_db())
+
+    hardware = hardware_by_id(client.get("/api/hardware"))
+    assert hardware["HWSet1"]["available"] == 6

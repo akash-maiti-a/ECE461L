@@ -9,21 +9,56 @@ numbers on the frontend -- they come from the database from the start.
 class Hardware:
     collection_name = "hardware_sets"
 
+    # Same names, capacities, and contents the landing page showed from its
+    # stubs. The contents are still placeholders for the team to replace
+    # with the real gear list.
     DEFAULT_SETS = [
-        {"setId": "HWSet1", "name": "Camera Kits", "capacity": 10, "available": 10},
-        {"setId": "HWSet2", "name": "Audio and Lighting Kits", "capacity": 10, "available": 10},
+        {
+            "setId": "HWSet1",
+            "name": "Camera kits",
+            "capacity": 10,
+            "contents": [
+                "Mirrorless camera body",
+                "24–70mm zoom lens",
+                "Three batteries and a charger",
+                "Two 128 GB SD cards",
+                "Fluid-head tripod",
+            ],
+        },
+        {
+            "setId": "HWSet2",
+            "name": "Audio and lighting kits",
+            "capacity": 8,
+            "contents": [
+                "Shotgun mic with boom pole",
+                "Field recorder",
+                "Wired lav mic",
+                "Two LED panels with stands",
+                "Sandbags and gaffer tape",
+            ],
+        },
     ]
 
     @staticmethod
     def seed(db):
-        """Insert the default hardware sets if they don't already exist.
-        Safe to call on every app startup -- $setOnInsert means existing
-        documents (and their current `available` count) are left alone.
+        """Make sure every default hardware set exists. Safe to call on
+        every app startup.
+
+        - name and contents are always refreshed ($set), so editing the
+          kit list above updates an existing database on the next restart.
+        - capacity and available are only written when the set is first
+          created ($setOnInsert), so a restart never wipes out the live
+          count of kits that are checked out.
         """
         collection = db[Hardware.collection_name]
         for hw in Hardware.DEFAULT_SETS:
             collection.update_one(
-                {"setId": hw["setId"]}, {"$setOnInsert": hw}, upsert=True
+                {"setId": hw["setId"]},
+                {
+                    "$set": {"name": hw["name"], "contents": hw["contents"]},
+                    "$setOnInsert": {"capacity": hw["capacity"], "available": hw["capacity"]},
+                },
+                upsert=True,
             )
 
     @staticmethod
