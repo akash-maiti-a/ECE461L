@@ -248,3 +248,75 @@ test('Back to projects returns to the picker', async () => {
 
   expect(await screen.findByRole('heading', { name: 'Open a project', level: 1 })).toBeInTheDocument();
 });
+
+const HARDWARE_AFTER_CHECKOUT = [
+  { ...HARDWARE[0], available: 4 },
+  HARDWARE[1],
+];
+
+function kitRow(shelf, name) {
+  return within(shelf).getByText(name).closest('.shelf-row');
+}
+
+test('checking out kits updates the shelf and this project’s count', async () => {
+  const shelf = await openFilmProject();
+  api.checkOut.mockResolvedValue(HARDWARE_AFTER_CHECKOUT);
+  api.getProject.mockResolvedValue({ ...PROJECT, checkedOut: { HWSet1: 3 } });
+
+  const camera = kitRow(shelf, 'Camera kits');
+  fireEvent.change(within(camera).getByLabelText('Camera kits'), { target: { value: '3' } });
+  fireEvent.click(within(camera).getByRole('button', { name: 'Check out' }));
+
+  expect(await within(camera).findByRole('status')).toHaveTextContent('Checked out 3 camera kits.');
+  expect(camera).toHaveTextContent('4 of 10 on the shelf');
+  expect(camera).toHaveTextContent('3 with this project');
+  expect(api.checkOut).toHaveBeenCalledWith('film-01', 'HWSet1', 3);
+  expect(within(camera).getByLabelText('Camera kits')).toHaveValue(null);
+});
+
+test('checking in one kit uses the singular', async () => {
+  const shelf = await openFilmProject({ ...PROJECT, checkedOut: { HWSet2: 2 } });
+  api.checkIn.mockResolvedValue(HARDWARE);
+  api.getProject.mockResolvedValue({ ...PROJECT, checkedOut: { HWSet2: 1 } });
+
+  const audio = kitRow(shelf, 'Audio and lighting kits');
+  fireEvent.change(within(audio).getByLabelText('Audio and lighting kits'), { target: { value: '1' } });
+  fireEvent.click(within(audio).getByRole('button', { name: 'Check in' }));
+
+  expect(await within(audio).findByRole('status')).toHaveTextContent(
+    'Checked in 1 audio and lighting kit.'
+  );
+  expect(api.checkIn).toHaveBeenCalledWith('film-01', 'HWSet2', 1);
+});
+
+test('a rejected checkout shows the server’s message in that row', async () => {
+  const shelf = await openFilmProject();
+  api.checkOut.mockRejectedValue(new Error('Only 7 camera kits are on the shelf.'));
+
+  const camera = kitRow(shelf, 'Camera kits');
+  fireEvent.change(within(camera).getByLabelText('Camera kits'), { target: { value: '9' } });
+  fireEvent.click(within(camera).getByRole('button', { name: 'Check out' }));
+
+  expect(await within(camera).findByRole('alert')).toHaveTextContent(
+    'Only 7 camera kits are on the shelf.'
+  );
+  expect(within(camera).getByLabelText('Camera kits')).toHaveValue(9);
+});
+
+test('a quantity that is not a whole number is caught before sending', async () => {
+  const shelf = await openFilmProject();
+
+  const camera = kitRow(shelf, 'Camera kits');
+  fireEvent.change(within(camera).getByLabelText('Camera kits'), { target: { value: '1.5' } });
+  fireEvent.click(within(camera).getByRole('button', { name: 'Check out' }));
+
+  expect(within(camera).getByRole('alert')).toHaveTextContent('Enter a whole number of kits');
+  expect(api.checkOut).not.toHaveBeenCalled();
+});
+
+test('Check in is disabled when this project has none of that kit', async () => {
+  const shelf = await openFilmProject({ ...PROJECT, checkedOut: { HWSet1: 2 } });
+
+  expect(within(kitRow(shelf, 'Camera kits')).getByRole('button', { name: 'Check in' })).toBeEnabled();
+  expect(within(kitRow(shelf, 'Audio and lighting kits')).getByRole('button', { name: 'Check in' })).toBeDisabled();
+});

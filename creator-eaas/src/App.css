@@ -483,6 +483,51 @@ main {
   gap: 4px 28px;
 }
 
+.kit-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.kit-controls label {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.kit-controls input {
+  width: 5.5rem;
+  font: inherit;
+  padding: 0.6rem 0.75rem;
+  color: var(--ink);
+  background: var(--cyc);
+  border: 2px solid var(--rule);
+  border-radius: 4px;
+}
+
+.kit-controls input:focus-visible {
+  border-color: var(--focus);
+  outline: none;
+}
+
+.button-quiet:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.kit-note {
+  margin-top: 12px;
+  font-size: 0.95rem;
+}
+
+/* Success uses the set's tape as a marker rather than a green box, so it
+   reads as a note about that shelf. */
+.kit-note-success {
+  padding-left: 12px;
+  border-left: 4px solid var(--tape-color);
+}
+
 .shelf-legend {
   display: flex;
   flex-wrap: wrap;

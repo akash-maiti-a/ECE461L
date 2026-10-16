@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { getHardware, getProject } from '../api';
+import { checkIn, checkOut, getHardware, getProject } from '../api';
 import { ShelfUnavailable, Slots } from '../components/ShelfBoard';
 
 // One project's page: who the project is, and a shelf per hardware set
@@ -10,6 +10,9 @@ function ProjectPage({ project: openedProject, onBack }) {
   const [project, setProject] = useState(openedProject);
   const [hardware, setHardware] = useState(null);
   const [failed, setFailed] = useState(false);
+  const [busySetId, setBusySetId] = useState(null);
+  // The latest result, shown in the row it belongs to: { setId, type, text }.
+  const [message, setMessage] = useState(null);
 
   // Re-fetch the project too, so its checkedOut tally is current even if a
   // teammate changed it since the picker loaded it.
@@ -26,6 +29,24 @@ function ProjectPage({ project: openedProject, onBack }) {
   useEffect(() => {
     load();
   }, [load]);
+
+  async function moveKits(action, set, quantity) {
+    setBusySetId(set.setId);
+    setMessage(null);
+    try {
+      const send = action === 'checkout' ? checkOut : checkIn;
+      setHardware(await send(projectId, set.setId, quantity));
+      setProject(await getProject(projectId));
+      const verb = action === 'checkout' ? 'Checked out' : 'Checked in';
+      setMessage({ setId: set.setId, type: 'success', text: `${verb} ${kitCount(quantity, set.name)}.` });
+      return true;
+    } catch (err) {
+      setMessage({ setId: set.setId, type: 'error', text: err.message });
+      return false;
+    } finally {
+      setBusySetId(null);
+    }
+  }
 
   return (
     <section className="page-section">
@@ -52,6 +73,9 @@ function ProjectPage({ project: openedProject, onBack }) {
                   key={set.setId}
                   set={set}
                   yours={project.checkedOut?.[set.setId] ?? 0}
+                  busy={busySetId === set.setId}
+                  message={message?.setId === set.setId ? message : null}
+                  onMove={(action, quantity) => moveKits(action, set, quantity)}
                 />
               ))
             ) : (
@@ -78,7 +102,31 @@ function ProjectPage({ project: openedProject, onBack }) {
   );
 }
 
-function ProjectShelfRow({ set, yours }) {
+// "1 camera kit", "3 camera kits".
+function kitCount(quantity, setName) {
+  const name = setName.toLowerCase();
+  return `${quantity} ${quantity === 1 ? name.replace(/s$/, '') : name}`;
+}
+
+function ProjectShelfRow({ set, yours, busy, message, onMove }) {
+  const [quantity, setQuantity] = useState('');
+  const [inputError, setInputError] = useState('');
+  const inputId = `quantity-${set.setId}`;
+
+  async function handle(action) {
+    const amount = Number(quantity);
+    if (!Number.isInteger(amount) || amount <= 0) {
+      setInputError('Enter a whole number of kits, like 2.');
+      return;
+    }
+    setInputError('');
+    if (await onMove(action, amount)) {
+      setQuantity('');
+    }
+  }
+
+  const note = inputError ? { type: 'error', text: inputError } : message;
+
   return (
     <div className={`shelf-row tape-${set.setId}`}>
       <span className="tape">{set.name}</span>
@@ -91,6 +139,46 @@ function ProjectShelfRow({ set, yours }) {
           <strong>{yours}</strong> with this project
         </p>
       </div>
+      <form
+        className="kit-controls"
+        aria-label={`Check ${set.name.toLowerCase()} out or in`}
+        onSubmit={(event) => {
+          event.preventDefault();
+          handle('checkout');
+        }}
+      >
+        <label htmlFor={inputId}>Kits</label>
+        <input
+          id={inputId}
+          // Both rows say "Kits" visibly; the set name tells screen readers which.
+          aria-label={set.name}
+          type="number"
+          inputMode="numeric"
+          min="1"
+          step="1"
+          value={quantity}
+          onChange={(e) => setQuantity(e.target.value)}
+        />
+        <button type="submit" className="button-primary" disabled={busy || set.available === 0}>
+          Check out
+        </button>
+        <button
+          type="button"
+          className="button-quiet"
+          disabled={busy || yours === 0}
+          onClick={() => handle('checkin')}
+        >
+          Check in
+        </button>
+      </form>
+      {note && (
+        <p
+          className={note.type === 'error' ? 'form-error kit-note' : 'kit-note kit-note-success'}
+          role={note.type === 'error' ? 'alert' : 'status'}
+        >
+          {note.text}
+        </p>
+      )}
     </div>
   );
 }
