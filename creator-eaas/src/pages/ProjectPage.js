@@ -143,6 +143,7 @@ function ProjectSwitcher({ projectId, userid, onSwitch }) {
     </div>
   );
 }
+
 // Box style, name, and meaning for each kind of slot in the key.
 const LEGEND = [
   ['slot-full', 'On the shelf', 'Ready to check out.'],

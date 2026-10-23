@@ -62,6 +62,8 @@ export function signIn(userid, password) {
 //   200 [{ projectId, name, ownerUserid }], sorted by name
 export function listProjects() {
   return request('/api/projects');
+}
+
 // GET /api/auth/me  ->  { userid }, or { userid: null } when signed out
 export function getCurrentUser() {
   return request('/api/auth/me');
@@ -72,10 +74,10 @@ export function signOut() {
   return post('/api/auth/signout', {});
 }
 
-// POST /api/projects  { projectId, name, description, ownerUserid }
-//   201 project  |  409 if the project ID is taken
-export function createProject({ projectId, name, description, ownerUserid }) {
-  return post('/api/projects', { projectId, name, description, ownerUserid });
+// POST /api/projects  { projectId, name, description }
+//   201 project, owned by the signed-in user  |  409 if the project ID is taken
+export function createProject({ projectId, name, description }) {
+  return post('/api/projects', { projectId, name, description });
 }
 
 // GET /api/projects/:projectId

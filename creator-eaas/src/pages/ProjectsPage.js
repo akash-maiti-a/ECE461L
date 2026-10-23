@@ -13,14 +13,14 @@ function ProjectsPage({ userid, onOpen }) {
         your crew already made.
       </p>
       <div className="picker">
-        <CreateProjectForm userid={userid} onCreated={onOpen} />
+        <CreateProjectForm onCreated={onOpen} />
         <JoinProjectForm userid={userid} onFound={onOpen} />
       </div>
     </section>
   );
 }
 
-function CreateProjectForm({ userid, onCreated }) {
+function CreateProjectForm({ onCreated }) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [projectId, setProjectId] = useState('');
@@ -45,7 +45,6 @@ function CreateProjectForm({ userid, onCreated }) {
         projectId: projectId.trim(),
         name: name.trim(),
         description: description.trim(),
-        ownerUserid: userid,
       });
       onCreated(project);
     } catch (err) {

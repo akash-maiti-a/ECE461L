@@ -58,9 +58,10 @@ describe('requests match the backend contract', () => {
   });
 
   test('createProject', async () => {
-    const project = { projectId: 'doc-07', name: 'Doc', description: 'Short doc', ownerUserid: 'alice' };
-    reply(201, { ...project, checkedOut: {} });
+    const project = { projectId: 'doc-07', name: 'Doc', description: 'Short doc' };
+    reply(201, { ...project, ownerUserid: 'alice', checkedOut: {} });
     await createProject(project);
+    // The server takes the owner from the sign-in cookie, so it isn't sent.
     expect(sentRequest()).toMatchObject({ url: '/api/projects', method: 'POST', body: project });
   });
 
