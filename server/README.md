@@ -72,17 +72,22 @@ resets `available`.
 ## Endpoints
 
 Errors always come back as `{"error": "<message for the user>"}`.
+🔒 = must be signed in (401 otherwise). Signing up or in stores the userid in
+a signed session cookie that lasts 7 days, so a refresh keeps you signed in.
+Sign-up needs a password of at least 8 characters.
 
 | Method | Path | Body | Success | Errors |
 |---|---|---|---|---|
 | GET | `/api/health` | | `200 {status}` | |
 | POST | `/api/auth/signup` | `{userid, password}` | `201 {userid}` | 400 missing field, 409 user ID taken |
 | POST | `/api/auth/signin` | `{userid, password}` | `200 {userid}` | 400 missing field, 401 wrong user ID or password |
-| POST | `/api/projects` | `{projectId, name, description, ownerUserid}` | `201` project | 400 missing field, 409 project ID taken |
-| GET | `/api/projects/<projectId>` | | `200` project | 404 no such project |
+| GET | `/api/auth/me` | | `200 {userid}` (`null` if signed out) | |
+| POST | `/api/auth/signout` | | `200 {userid: null}` | |
+| POST | `/api/projects` 🔒 | `{projectId, name, description}` | `201` project, owned by the signed-in user | 400 missing field, 409 project ID taken |
+| GET | `/api/projects/<projectId>` 🔒 | | `200` project | 404 no such project |
 | GET | `/api/hardware` | | `200` list of hardware sets | |
-| POST | `/api/hardware/checkout` | `{projectId, setId, quantity}` | `200` updated hardware list | 400 bad input, 404 unknown project or set, 409 not enough on the shelf |
-| POST | `/api/hardware/checkin` | `{projectId, setId, quantity}` | `200` updated hardware list | 400 bad input, 404 unknown project or set, 409 more than the project has out |
+| POST | `/api/hardware/checkout` 🔒 | `{projectId, setId, quantity}` | `200` updated hardware list | 400 bad input, 404 unknown project or set, 409 not enough on the shelf |
+| POST | `/api/hardware/checkin` 🔒 | `{projectId, setId, quantity}` | `200` updated hardware list | 400 bad input, 404 unknown project or set, 409 more than the project has out |
 
 ## Rules the backend enforces
 
@@ -99,5 +104,5 @@ Errors always come back as `{"error": "<message for the user>"}`.
   the project) in separate steps. If the server crashed between them, the
   counts could drift. MongoDB transactions would fix this. They need a
   replica set, which MongoDB Atlas provides.
-- Nothing checks who is making a request yet: any user can act on any
-  project. Sign-in tokens and project membership are tracked in issue #17.
+- Any signed-in user can open any project if they know its ID. Project
+  membership is tracked in issue #17.

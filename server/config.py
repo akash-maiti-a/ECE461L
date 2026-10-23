@@ -1,4 +1,5 @@
 import os
+from datetime import timedelta
 
 from dotenv import load_dotenv
 
@@ -21,3 +22,6 @@ class Config:
     # Set USE_MOCK_DB=1 to run against an in-memory database (no MongoDB
     # install needed). Data is lost when the server stops.
     USE_MOCK_DB = os.environ.get("USE_MOCK_DB") == "1"
+    # Sign-in cookie lasts a week and isn't sent on requests from other sites.
+    PERMANENT_SESSION_LIFETIME = timedelta(days=7)
+    SESSION_COOKIE_SAMESITE = "Lax"

@@ -67,6 +67,19 @@ function ProjectPage({ project: openedProject, onBack }) {
           <ShelfUnavailable onRetry={load} />
         ) : (
           <figure className="shelf" aria-label="Kits for this project">
+            <figcaption className="shelf-legend">
+              <strong>How to read the shelf:</strong> each box is one kit.
+              <ul aria-label="Shelf key">
+                {LEGEND.map(([swatch, label, detail]) => (
+                  <li key={label}>
+                    <span className={`slot legend-swatch ${swatch}`} aria-hidden="true" />
+                    <span>
+                      <strong>{label}</strong> {detail}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </figcaption>
             {hardware ? (
               hardware.map((set) => (
                 <ProjectShelfRow
@@ -81,26 +94,25 @@ function ProjectPage({ project: openedProject, onBack }) {
             ) : (
               <p className="shelf-loading">Counting the shelf…</p>
             )}
-            <figcaption className="shelf-legend">
-              <span>
-                <span className="slot slot-full legend-swatch tape-HWSet1" aria-hidden="true" />
-                On the shelf
-              </span>
-              <span>
-                <span className="slot slot-yours legend-swatch tape-HWSet1" aria-hidden="true" />
-                With this project
-              </span>
-              <span>
-                <span className="slot legend-swatch" aria-hidden="true" />
-                With other projects
-              </span>
-            </figcaption>
           </figure>
         )}
       </div>
     </section>
   );
 }
+
+// Box style, name, and meaning for each kind of slot in the key.
+const LEGEND = [
+  ['slot-full', 'On the shelf', 'Ready to check out.'],
+  ['slot-yours', 'With this project', 'Check it in when you wrap.'],
+  ['', 'With other projects', 'Out until that crew returns it.'],
+];
+
+// Simple line icons for each kit type (decorative; the set name is next to it).
+const KIT_ICONS = {
+  HWSet1: 'M4 8h3l1.5-2.5h7L17 8h3v11H4ZM12 16.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z',
+  HWSet2: 'M8 3a3 3 0 0 1 3 3v4a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3ZM3 10a5 5 0 0 0 10 0M8 15v5M16 7h5l-1 4h-3ZM18.5 11v9',
+};
 
 // "1 camera kit", "3 camera kits".
 function kitCount(quantity, setName) {
@@ -126,17 +138,29 @@ function ProjectShelfRow({ set, yours, busy, message, onMove }) {
   }
 
   const note = inputError ? { type: 'error', text: inputError } : message;
+  const others = set.capacity - set.available - yours;
 
   return (
     <div className={`shelf-row tape-${set.setId}`}>
-      <span className="tape">{set.name}</span>
+      <div className="shelf-row-heading">
+        <svg className="kit-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <path d={KIT_ICONS[set.setId] || 'M4 4h16v16H4Z'} />
+        </svg>
+        <span className="tape">{set.name}</span>
+      </div>
       <Slots capacity={set.capacity} available={set.available} yours={yours} />
       <div className="shelf-counts">
         <p className="shelf-count">
+          <span className="slot legend-swatch slot-full" aria-hidden="true" />
           <strong>{set.available}</strong> of {set.capacity} on the shelf
         </p>
         <p className="shelf-count">
+          <span className="slot legend-swatch slot-yours" aria-hidden="true" />
           <strong>{yours}</strong> with this project
+        </p>
+        <p className="shelf-count">
+          <span className="slot legend-swatch" aria-hidden="true" />
+          <strong>{others}</strong> with other projects
         </p>
       </div>
       <form
@@ -171,6 +195,9 @@ function ProjectShelfRow({ set, yours, busy, message, onMove }) {
           Check in
         </button>
       </form>
+      <p className="kit-limits">
+        You can check out up to {set.available} and check in up to {yours}.
+      </p>
       {note && (
         <p
           className={note.type === 'error' ? 'form-error kit-note' : 'kit-note kit-note-success'}
