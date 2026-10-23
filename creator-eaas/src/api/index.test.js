@@ -1,4 +1,13 @@
-import { checkIn, checkOut, createProject, getHardware, getProject, signIn, signUp } from '.';
+import {
+  checkIn,
+  checkOut,
+  createProject,
+  getHardware,
+  getProject,
+  listProjects,
+  signIn,
+  signUp,
+} from '.';
 
 // These tests replace the browser's fetch with a Jest mock, so they check
 // exactly what each function sends and how it handles the reply, without a
@@ -59,6 +68,13 @@ describe('requests match the backend contract', () => {
     reply(200, {});
     await getProject('film club/01');
     expect(sentRequest()).toMatchObject({ url: '/api/projects/film%20club%2F01', method: 'GET' });
+  });
+
+  test('listProjects', async () => {
+    const projects = [{ projectId: 'film-01', name: 'Spring short film', ownerUserid: 'alice' }];
+    reply(200, projects);
+    await expect(listProjects()).resolves.toEqual(projects);
+    expect(sentRequest()).toMatchObject({ url: '/api/projects', method: 'GET' });
   });
 
   test('getHardware', async () => {

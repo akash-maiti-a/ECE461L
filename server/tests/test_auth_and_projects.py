@@ -68,6 +68,21 @@ def test_get_unknown_project_returns_404(client):
     assert response.get_json()["error"] == 'No project has the ID "does-not-exist".'
 
 
+def test_list_projects_returns_summaries_sorted_by_name(client):
+    assert client.get("/api/projects").get_json() == []
+
+    for project_id, name in [("p-b", "Zine shoot"), ("p-a", "audio drama")]:
+        client.post(
+            "/api/projects",
+            json={"projectId": project_id, "name": name, "description": "d", "ownerUserid": "alice"},
+        )
+
+    response = client.get("/api/projects")
+    assert response.status_code == 200
+    assert response.get_json() == [
+        {"projectId": "p-a", "name": "audio drama", "ownerUserid": "alice"},
+        {"projectId": "p-b", "name": "Zine shoot", "ownerUserid": "alice"},
+    ]
 def test_session_survives_a_refresh_and_signout_ends_it(client):
     assert client.get("/api/auth/me").get_json() == {"userid": "alice"}
     client.post("/api/auth/signout")

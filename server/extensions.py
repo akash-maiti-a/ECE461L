@@ -25,7 +25,8 @@ def init_db(app):
         return _db
     mongo_uri = app.config["MONGO_URI"]
     _client = MongoClient(mongo_uri)
-    _db = _client.get_default_database()
+    # Atlas URIs often end at the host with no database name; use haas_db then.
+    _db = _client.get_default_database("haas_db")
     return _db
 
 

@@ -17,11 +17,15 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import extensions  # noqa: E402
 from app import create_app  # noqa: E402
+from config import Config  # noqa: E402
 
 
 @pytest.fixture
 def app(monkeypatch):
     monkeypatch.setattr(extensions, "MongoClient", mongomock.MongoClient)
+    # Ignore any Atlas URI in .env: a mongodb+srv:// URI makes even mongomock
+    # do a DNS lookup, which slows every test and needs the network.
+    monkeypatch.setattr(Config, "MONGO_URI", "mongodb://localhost:27017/haas_db")
     flask_app = create_app()
     yield flask_app
 

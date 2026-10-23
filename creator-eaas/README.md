@@ -22,7 +22,7 @@ npm start
 ```
 
 Open http://localhost:3000. The dev server forwards every `/api/...` request
-to Flask on port 5001 (the `proxy` setting in `package.json`).
+to Flask on port 5001 (see `src/setupProxy.js`).
 
 If the shelf says "Count unavailable", the API isn't running. The browser
 console says which request failed.

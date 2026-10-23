@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import './App.css';
+import { getProject } from './api';
 import { getCurrentUser, signOut as endSession } from './api';
 import AuthDialog from './components/AuthDialog';
 import LandingPage from './pages/LandingPage';
@@ -46,6 +47,11 @@ function App() {
     setView('project');
   }
 
+  // From the project page's dropdown. Errors go back to the dropdown to show.
+  async function switchProject(projectId) {
+    openProject(await getProject(projectId));
+  }
+
   function goHome(event) {
     event.preventDefault();
     setView('home');
@@ -57,7 +63,16 @@ function App() {
   } else if (userid && view === 'projects') {
     content = <ProjectsPage userid={userid} onOpen={openProject} />;
   } else if (userid && view === 'project' && project) {
-    content = <ProjectPage project={project} onBack={() => setView('projects')} />;
+    content = (
+      <ProjectPage
+        // A new key resets the page's state when switching projects.
+        key={project.projectId}
+        project={project}
+        userid={userid}
+        onBack={() => setView('projects')}
+        onSwitch={switchProject}
+      />
+    );
   } else {
     content = (
       <LandingPage

@@ -39,6 +39,17 @@ class Project:
         return db[Project.collection_name].find_one({"projectId": project_id}, {"_id": 0})
 
     @staticmethod
+    def list_all(db):
+        """Every project's ID, name, and owner, sorted by name. Feeds the
+        frontend's project dropdowns, so it leaves out descriptions and
+        checkout tallies.
+        """
+        cursor = db[Project.collection_name].find(
+            {}, {"_id": 0, "projectId": 1, "name": 1, "ownerUserid": 1}
+        )
+        return sorted(cursor, key=lambda p: (p["name"].lower(), p["projectId"]))
+
+    @staticmethod
     def add_checked_out(db, project_id, set_id, quantity):
         """Record that the project took `quantity` more kits from a set."""
         db[Project.collection_name].update_one(
