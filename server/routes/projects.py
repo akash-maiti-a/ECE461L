@@ -10,6 +10,11 @@ projects_bp = Blueprint("projects", __name__, url_prefix="/api/projects")
 REQUIRED_FIELDS = ["projectId", "name", "description", "ownerUserid"]
 
 
+@projects_bp.route("", methods=["GET"])
+def list_projects():
+    return jsonify(Project.list_all(get_db())), 200
+
+
 @projects_bp.route("", methods=["POST"])
 def create_project():
     data = request.get_json(silent=True) or {}

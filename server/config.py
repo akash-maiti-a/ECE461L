@@ -14,7 +14,12 @@ class Config:
     not edit code.
     """
 
-    MONGO_URI = os.environ.get("MONGO_URI", "mongodb://localhost:27017/haas_db")
+    # MONGODB_URI is the name MongoDB Atlas's onboarding writes into .env.
+    MONGO_URI = (
+        os.environ.get("MONGO_URI")
+        or os.environ.get("MONGODB_URI")
+        or "mongodb://localhost:27017/haas_db"
+    )
     SECRET_KEY = os.environ.get("SECRET_KEY", "dev-secret-key")
     # Port 5000 is taken by AirPlay Receiver on recent macOS, so default to 5001.
     PORT = int(os.environ.get("PORT", "5001"))

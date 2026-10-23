@@ -6,7 +6,7 @@
 // get an Error whose message is ready to show the user.
 //
 // In development, npm start forwards /api requests to Flask on port 5001
-// (the "proxy" setting in package.json), so BASE_URL is empty. For a
+// (see src/setupProxy.js), so BASE_URL is empty. For a
 // deployed build, set REACT_APP_API_URL to the backend's public URL.
 const BASE_URL = process.env.REACT_APP_API_URL || '';
 
@@ -55,6 +55,12 @@ export function signUp(userid, password) {
 //   200 { userid }  |  401 if the user ID or password is wrong
 export function signIn(userid, password) {
   return post('/api/auth/signin', { userid, password });
+}
+
+// GET /api/projects
+//   200 [{ projectId, name, ownerUserid }], sorted by name
+export function listProjects() {
+  return request('/api/projects');
 }
 
 // POST /api/projects  { projectId, name, description, ownerUserid }

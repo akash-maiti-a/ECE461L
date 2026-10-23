@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import App from './App';
 import * as api from './api';
 
@@ -16,6 +16,7 @@ const HARDWARE = [
 // responses here rather than once at the top.
 beforeEach(() => {
   api.getHardware.mockResolvedValue(HARDWARE);
+  api.listProjects.mockResolvedValue(PROJECT_LIST);
   // The app remembers who's signed in for the tab; start every test fresh.
   window.sessionStorage.clear();
 });
@@ -49,6 +50,21 @@ const PROJECT = {
   checkedOut: {},
 };
 
+const OTHER_PROJECT = {
+  projectId: 'doc-02',
+  name: 'Campus documentary',
+  description: 'Interviews around campus.',
+  ownerUserid: 'bob',
+  checkedOut: {},
+};
+
+// What GET /api/projects returns: summaries, sorted by name.
+const PROJECT_LIST = [OTHER_PROJECT, PROJECT].map(({ projectId, name, ownerUserid }) => ({
+  projectId,
+  name,
+  ownerUserid,
+}));
+
 // Signs in as alice and waits for the project picker.
 async function signInToProjects() {
   api.signIn.mockResolvedValue({ userid: 'alice' });
@@ -62,6 +78,16 @@ async function signInToProjects() {
 
 function form(name) {
   return screen.getByRole('form', { name });
+}
+
+// Picks a project in the join dropdown (once the list loads) and opens it.
+async function chooseProject(projectId) {
+  const join = form('Join a project');
+  const select = await within(join).findByRole('combobox', { name: 'Project' });
+  await waitFor(() => expect(select).toBeEnabled());
+  fireEvent.change(select, { target: { value: projectId } });
+  fireEvent.click(within(join).getByRole('button', { name: 'Open project' }));
+  return join;
 }
 
 test('shelf board shows kit counts from the API', async () => {
@@ -171,27 +197,69 @@ test('creating a project opens it', async () => {
   });
 });
 
-test('joining a project by ID opens it', async () => {
+test('joining a project from the dropdown opens it', async () => {
   api.getProject.mockResolvedValue(PROJECT);
   await signInToProjects();
 
-  const join = form('Join a project');
-  fireEvent.change(within(join).getByLabelText('Project ID'), { target: { value: 'film-01' } });
-  fireEvent.click(within(join).getByRole('button', { name: 'Open project' }));
+  await chooseProject('film-01');
 
   expect(await screen.findByRole('heading', { name: 'Spring short film' })).toBeInTheDocument();
   expect(api.getProject).toHaveBeenCalledWith('film-01');
 });
 
-test('joining an unknown project shows the server’s message', async () => {
-  api.getProject.mockRejectedValue(new Error('No project has the ID "nope".'));
+test('a project deleted since the list loaded shows the server’s message', async () => {
+  api.getProject.mockRejectedValue(new Error('No project has the ID "doc-02".'));
+  await signInToProjects();
+
+  const join = await chooseProject('doc-02');
+
+  expect(await within(join).findByRole('alert')).toHaveTextContent('No project has the ID "doc-02".');
+});
+
+test('the join dropdown lists your projects first', async () => {
+  await signInToProjects();
+
+  const select = await within(form('Join a project')).findByRole('combobox', { name: 'Project' });
+  await waitFor(() => expect(select).toBeEnabled());
+  const groups = within(select).getAllByRole('group');
+  expect(groups.map((g) => g.getAttribute('label'))).toEqual(['Your projects', 'Other projects']);
+  expect(within(groups[0]).getByRole('option')).toHaveTextContent('Spring short film (film-01)');
+  expect(within(groups[1]).getByRole('option')).toHaveTextContent('Campus documentary (doc-02)');
+  // Your first project is picked to start with.
+  expect(select).toHaveValue('film-01');
+});
+
+test('with no projects yet, the join form says so', async () => {
+  api.listProjects.mockResolvedValue([]);
   await signInToProjects();
 
   const join = form('Join a project');
-  fireEvent.change(within(join).getByLabelText('Project ID'), { target: { value: 'nope' } });
-  fireEvent.click(within(join).getByRole('button', { name: 'Open project' }));
+  expect(await within(join).findByText('No projects yet. Start the first one.')).toBeInTheDocument();
+  expect(within(join).getByRole('button', { name: 'Open project' })).toBeDisabled();
+});
 
-  expect(await within(join).findByRole('alert')).toHaveTextContent('No project has the ID "nope".');
+test('when the project list fails to load, Try again reloads it', async () => {
+  api.listProjects.mockRejectedValueOnce(new Error('down'));
+  await signInToProjects();
+
+  const join = form('Join a project');
+  expect(await within(join).findByRole('alert')).toHaveTextContent('The project list didn’t load.');
+  fireEvent.click(within(join).getByRole('button', { name: 'Try again' }));
+
+  expect(await within(join).findByRole('combobox', { name: 'Project' })).toBeInTheDocument();
+});
+
+test('the project ID fills in from the name until you edit it', async () => {
+  await signInToProjects();
+  const create = form('Start a new project');
+  const id = within(create).getByLabelText('Project ID');
+
+  fireEvent.change(within(create).getByLabelText('Project name'), { target: { value: 'Spring Short Film!' } });
+  expect(id).toHaveValue('spring-short-film');
+
+  fireEvent.change(id, { target: { value: 'film-01' } });
+  fireEvent.change(within(create).getByLabelText('Project name'), { target: { value: 'Spring film' } });
+  expect(id).toHaveValue('film-01');
 });
 
 test('signing out returns to the landing page', async () => {
@@ -207,9 +275,7 @@ test('signing out returns to the landing page', async () => {
 async function openFilmProject(project = PROJECT) {
   api.getProject.mockResolvedValue(project);
   await signInToProjects();
-  const join = form('Join a project');
-  fireEvent.change(within(join).getByLabelText('Project ID'), { target: { value: project.projectId } });
-  fireEvent.click(within(join).getByRole('button', { name: 'Open project' }));
+  await chooseProject(project.projectId);
   const shelf = await screen.findByRole('figure', { name: 'Kits for this project' });
   await within(shelf).findByText('Camera kits');
   return shelf;
@@ -231,9 +297,7 @@ test('the project page shows what is on the shelf and what this project has', as
 test('the project page offers Try again when its data fails to load', async () => {
   api.getProject.mockResolvedValueOnce(PROJECT).mockRejectedValueOnce(new Error('down'));
   await signInToProjects();
-  const join = form('Join a project');
-  fireEvent.change(within(join).getByLabelText('Project ID'), { target: { value: 'film-01' } });
-  fireEvent.click(within(join).getByRole('button', { name: 'Open project' }));
+  await chooseProject('film-01');
 
   expect(await screen.findByRole('alert')).toHaveTextContent('kit counts can’t be shown');
 
@@ -241,6 +305,20 @@ test('the project page offers Try again when its data fails to load', async () =
   fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
   const shelf = await screen.findByRole('figure', { name: 'Kits for this project' });
   expect(await within(shelf).findByText('Camera kits')).toBeInTheDocument();
+});
+
+test('the project page can switch straight to another project', async () => {
+  await openFilmProject();
+
+  api.getProject.mockResolvedValue(OTHER_PROJECT);
+  const switcher = await screen.findByRole('combobox', { name: 'Switch project' });
+  expect(switcher).toHaveValue('film-01');
+  fireEvent.change(switcher, { target: { value: 'doc-02' } });
+
+  expect(await screen.findByRole('heading', { name: 'Campus documentary', level: 1 })).toBeInTheDocument();
+  expect(api.getProject).toHaveBeenLastCalledWith('doc-02');
+  const shelf = await screen.findByRole('figure', { name: 'Kits for this project' });
+  await within(shelf).findByText('Camera kits');
 });
 
 test('Back to projects returns to the picker', async () => {

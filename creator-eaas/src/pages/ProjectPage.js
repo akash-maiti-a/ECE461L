@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import { checkIn, checkOut, getHardware, getProject } from '../api';
 import { ShelfUnavailable, Slots } from '../components/ShelfBoard';
+import useProjectList, { ProjectOptions } from '../useProjectList';
 
 // One project's page: who the project is, and a shelf per hardware set
 // showing what's on the shelf, what this project has, and what other
 // projects have.
-function ProjectPage({ project: openedProject, onBack }) {
+function ProjectPage({ project: openedProject, userid, onBack, onSwitch }) {
   const projectId = openedProject.projectId;
   const [project, setProject] = useState(openedProject);
   const [hardware, setHardware] = useState(null);
@@ -50,9 +51,12 @@ function ProjectPage({ project: openedProject, onBack }) {
 
   return (
     <section className="page-section">
-      <button className="button-link back-link" onClick={onBack}>
-        Back to projects
-      </button>
+      <div className="project-nav">
+        <button className="button-link" onClick={onBack}>
+          Back to projects
+        </button>
+        <ProjectSwitcher projectId={projectId} userid={userid} onSwitch={onSwitch} />
+      </div>
       <div className="project-heading">
         <h1 className="page-title">{project.name}</h1>
         <span className="tape tape-note tape-id" aria-label={`Project ID ${project.projectId}`}>
@@ -99,6 +103,45 @@ function ProjectPage({ project: openedProject, onBack }) {
         )}
       </div>
     </section>
+  );
+}
+
+// A dropdown for jumping straight to another project. Hidden until the list
+// loads, and when there's no other project to switch to.
+function ProjectSwitcher({ projectId, userid, onSwitch }) {
+  const { projects } = useProjectList();
+  const [switching, setSwitching] = useState(false);
+  const [error, setError] = useState('');
+
+  if (!projects || !projects.some((p) => p.projectId !== projectId)) {
+    return null;
+  }
+
+  async function handleChange(event) {
+    setSwitching(true);
+    setError('');
+    try {
+      await onSwitch(event.target.value);
+    } catch (err) {
+      setError(err.message);
+      setSwitching(false);
+    }
+  }
+
+  return (
+    <div className="project-switcher">
+      <label>
+        Switch project
+        <select value={projectId} onChange={handleChange} disabled={switching}>
+          <ProjectOptions projects={projects} userid={userid} />
+        </select>
+      </label>
+      {error && (
+        <p className="form-error" role="alert">
+          {error}
+        </p>
+      )}
+    </div>
   );
 }
 
