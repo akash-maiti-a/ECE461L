@@ -25,8 +25,12 @@ def _parse_request(db):
     quantity = data.get("quantity")
 
     # bool is a subclass of int in Python, so rule it out explicitly.
+    # IDs must be strings: a JSON object like {"$ne": null} would reach Mongo
+    # as a query operator and match some other project or set.
     if (
-        not project_id
+        not isinstance(project_id, str)
+        or not project_id
+        or not isinstance(set_id, str)
         or not set_id
         or not isinstance(quantity, int)
         or isinstance(quantity, bool)

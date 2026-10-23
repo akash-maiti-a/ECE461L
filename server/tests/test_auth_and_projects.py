@@ -47,7 +47,6 @@ def test_create_project_duplicate_id_rejected(client):
         "projectId": "proj-2",
         "name": "First",
         "description": "desc",
-        "ownerUserid": "alice",
     }
     assert client.post("/api/projects", json=body).status_code == 201
 
@@ -74,7 +73,7 @@ def test_list_projects_returns_summaries_sorted_by_name(client):
     for project_id, name in [("p-b", "Zine shoot"), ("p-a", "audio drama")]:
         client.post(
             "/api/projects",
-            json={"projectId": project_id, "name": name, "description": "d", "ownerUserid": "alice"},
+            json={"projectId": project_id, "name": name, "description": "d"},
         )
 
     response = client.get("/api/projects")
@@ -98,3 +97,38 @@ def test_signed_out_users_cannot_use_projects_or_kits(app):
     browser = app.test_client()
     assert browser.get("/api/projects/p").status_code == 401
     assert browser.post("/api/hardware/checkout", json={}).status_code == 401
+
+
+def test_project_owner_comes_from_the_session_not_the_body(client):
+    response = client.post(
+        "/api/projects",
+        json={"projectId": "p-x", "name": "X", "description": "d", "ownerUserid": "mallory"},
+    )
+    assert response.get_json()["ownerUserid"] == "alice"
+
+
+def test_signed_out_users_cannot_list_projects(app):
+    assert app.test_client().get("/api/projects").status_code == 401
+
+
+def test_signin_rejects_query_operators(app):
+    browser = app.test_client()
+    browser.post("/api/auth/signup", json={"userid": "erin", "password": "erin-pass"})
+    browser.post("/api/auth/signout")
+
+    response = browser.post(
+        "/api/auth/signin", json={"userid": {"$ne": None}, "password": "erin-pass"}
+    )
+    assert response.status_code == 400
+    assert browser.get("/api/auth/me").get_json() == {"userid": None}
+
+
+def test_create_project_rejects_non_strings_and_slashes(client):
+    operator = client.post(
+        "/api/projects", json={"projectId": {"$ne": None}, "name": "X", "description": "d"}
+    )
+    assert operator.status_code == 400
+    assert operator.get_json()["error"] == "Missing fields: projectId."
+
+    slash = client.post("/api/projects", json={"projectId": "a/b", "name": "X", "description": "d"})
+    assert slash.status_code == 400

@@ -169,3 +169,10 @@ def test_checkouts_and_checkins_are_logged(client, make_project):
         ("checkout", "HWSet1", 2),
         ("checkin", "HWSet1", 1),
     ]
+
+
+def test_checkout_rejects_query_operators_as_ids(client, make_project):
+    make_project("proj-op")
+    response = checkout(client, {"$ne": None}, "HWSet1", 1)
+    assert response.status_code == 400
+    assert checked_out(client, "proj-op", "HWSet1") == 0

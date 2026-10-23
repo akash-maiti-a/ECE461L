@@ -47,7 +47,10 @@ class Project:
         cursor = db[Project.collection_name].find(
             {}, {"_id": 0, "projectId": 1, "name": 1, "ownerUserid": 1}
         )
-        return sorted(cursor, key=lambda p: (p["name"].lower(), p["projectId"]))
+        # str() so one odd document (say, added by hand in Atlas) can't break sorting.
+        return sorted(
+            cursor, key=lambda p: (str(p.get("name", "")).lower(), str(p.get("projectId")))
+        )
 
     @staticmethod
     def add_checked_out(db, project_id, set_id, quantity):
