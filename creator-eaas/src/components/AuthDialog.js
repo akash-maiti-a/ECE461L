@@ -34,6 +34,10 @@ function AuthDialog({ mode, onModeChange, onClose, onSignedIn }) {
       setError('The passwords don’t match. Type the same password in both fields.');
       return;
     }
+    if (isNewUser && password.length < 8) {
+      setError('Use a password with at least 8 characters.');
+      return;
+    }
     setBusy(true);
     try {
       const id = userid.trim();

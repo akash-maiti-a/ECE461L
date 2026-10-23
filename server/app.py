@@ -26,7 +26,7 @@ def create_app(config_class=Config):
 
     # Allow the React dev server (and the deployed frontend) to call this
     # API from a different origin.
-    CORS(app)
+    CORS(app, supports_credentials=True)
 
     db = init_db(app)
     Hardware.seed(db)

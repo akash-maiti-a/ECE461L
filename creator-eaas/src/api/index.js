@@ -15,6 +15,7 @@ async function request(path, options = {}) {
   try {
     response = await fetch(`${BASE_URL}${path}`, {
       ...options,
+      credentials: 'include', // send the sign-in cookie
       headers: { 'Content-Type': 'application/json', ...options.headers },
     });
   } catch {
@@ -55,6 +56,16 @@ export function signUp(userid, password) {
 //   200 { userid }  |  401 if the user ID or password is wrong
 export function signIn(userid, password) {
   return post('/api/auth/signin', { userid, password });
+}
+
+// GET /api/auth/me  ->  { userid }, or { userid: null } when signed out
+export function getCurrentUser() {
+  return request('/api/auth/me');
+}
+
+// POST /api/auth/signout
+export function signOut() {
+  return post('/api/auth/signout', {});
 }
 
 // POST /api/projects  { projectId, name, description, ownerUserid }

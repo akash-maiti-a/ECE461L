@@ -6,6 +6,7 @@ from extensions import get_db
 from models.checkout_record import CheckoutRecord
 from models.hardware import Hardware
 from models.project import Project
+from session_auth import login_required
 
 hardware_bp = Blueprint("hardware", __name__, url_prefix="/api/hardware")
 
@@ -54,6 +55,7 @@ def list_hardware():
 
 
 @hardware_bp.route("/checkout", methods=["POST"])
+@login_required
 def checkout():
     """Check out a quantity of a hardware set for a project (SR7)."""
     db = get_db()
@@ -75,6 +77,7 @@ def checkout():
 
 
 @hardware_bp.route("/checkin", methods=["POST"])
+@login_required
 def checkin():
     """Check in a quantity of a hardware set, freeing it back up (SR8)."""
     db = get_db()
