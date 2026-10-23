@@ -17,6 +17,8 @@ const HARDWARE = [
 beforeEach(() => {
   api.getHardware.mockResolvedValue(HARDWARE);
   api.listProjects.mockResolvedValue(PROJECT_LIST);
+  api.getCurrentUser.mockResolvedValue({ userid: null });
+  api.signOut.mockResolvedValue({ userid: null });
   // The app remembers who's signed in for the tab; start every test fresh.
   window.sessionStorage.clear();
 });
@@ -25,7 +27,7 @@ beforeEach(() => {
 // land after a test has finished.
 async function renderApp() {
   render(<App />);
-  const shelf = screen.getByRole('figure', { name: 'Kits on the shelf right now' });
+  const shelf = await screen.findByRole('figure', { name: 'Kits on the shelf right now' });
   await within(shelf).findByText('Camera kits');
   return shelf;
 }
@@ -145,13 +147,13 @@ test('creating an account signs the new user in', async () => {
 
   fireEvent.click(screen.getByRole('button', { name: 'Create an account' }));
   fillIn('User ID', 'new-crew');
-  fillIn('Password', 'pw-123');
-  fillIn('Confirm password', 'pw-123');
+  fillIn('Password', 'pw-12345');
+  fillIn('Confirm password', 'pw-12345');
   submitDialog('Create an account');
 
   expect(await screen.findByRole('heading', { name: 'Open a project', level: 1 })).toBeInTheDocument();
   expect(screen.getByRole('banner')).toHaveTextContent('Signed in as new-crew');
-  expect(api.signUp).toHaveBeenCalledWith('new-crew', 'pw-123');
+  expect(api.signUp).toHaveBeenCalledWith('new-crew', 'pw-12345');
 });
 
 test('mismatched passwords are caught before anything is sent', async () => {
@@ -403,8 +405,9 @@ test('Check in is disabled when this project has none of that kit', async () => 
 
 test('a page refresh keeps you signed in on the same project', async () => {
   await openFilmProject();
-  cleanup(); // Like closing the page; sessionStorage survives a refresh.
+  cleanup(); // Like a refresh; the server still has the session cookie.
 
+  api.getCurrentUser.mockResolvedValue({ userid: 'alice' });
   api.getProject.mockResolvedValue(PROJECT);
   render(<App />);
 
@@ -422,5 +425,27 @@ test('signing out forgets the session', async () => {
   await renderApp();
 
   expect(screen.getByRole('button', { name: 'Create an account' })).toBeInTheDocument();
-  expect(window.sessionStorage.getItem('creator-eaas:userid')).toBeNull();
+  expect(api.signOut).toHaveBeenCalled();
+});
+
+test('the project shelf has a key, counts kits with other projects, and shows limits', async () => {
+  // 7 of 10 camera kits on the shelf and 2 with this project, so 1 with others.
+  const shelf = await openFilmProject({ ...PROJECT, checkedOut: { HWSet1: 2 } });
+
+  expect(within(shelf).getByRole('list', { name: 'Shelf key' })).toHaveTextContent('With other projects');
+  const camera = kitRow(shelf, 'Camera kits');
+  expect(camera).toHaveTextContent('1 with other projects');
+  expect(camera).toHaveTextContent('You can check out up to 7 and check in up to 2.');
+});
+
+test('signing up with a short password is caught before sending', async () => {
+  await renderApp();
+  fireEvent.click(screen.getByRole('button', { name: 'Create an account' }));
+  fillIn('User ID', 'new-crew');
+  fillIn('Password', 'short');
+  fillIn('Confirm password', 'short');
+  submitDialog('Create an account');
+
+  expect(screen.getByRole('alert')).toHaveTextContent('at least 8 characters');
+  expect(api.signUp).not.toHaveBeenCalled();
 });

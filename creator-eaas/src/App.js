@@ -1,6 +1,7 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import './App.css';
 import { getProject } from './api';
+import { getCurrentUser, signOut as endSession } from './api';
 import AuthDialog from './components/AuthDialog';
 import LandingPage from './pages/LandingPage';
 import ProjectPage from './pages/ProjectPage';
@@ -13,14 +14,20 @@ const TEAM = 'Kavi Daliparti, Akash Maiti, Shreyas Kumar, Saharsh Lavu, and Sanj
 // showing. App owns who is signed in, which page is showing, and which
 // project is open; each page owns its own data.
 function App() {
-  // Kept in sessionStorage so a refresh doesn't sign you out or lose your
-  // place (see useSessionState.js).
-  const [userid, setUserid] = useSessionState('userid', null);
+  // Who is signed in comes from the server's cookie (undefined = still
+  // checking). Which page you were on stays in sessionStorage.
+  const [userid, setUserid] = useState(undefined);
   const [view, setView] = useSessionState('view', 'home'); // 'home' | 'projects' | 'project'
   const [project, setProject] = useSessionState('project', null);
   const [dialogMode, setDialogMode] = useState(null); // 'signin' | 'signup' | null
 
   const closeDialog = useCallback(() => setDialogMode(null), []);
+
+  useEffect(() => {
+    getCurrentUser()
+      .then((me) => setUserid(me.userid))
+      .catch(() => setUserid(null));
+  }, []);
 
   function handleSignedIn(id) {
     setUserid(id);
@@ -28,7 +35,8 @@ function App() {
     setView('projects');
   }
 
-  function signOut() {
+  async function signOut() {
+    await endSession().catch(() => {}); // wait so the server clears the cookie
     setUserid(null);
     setProject(null);
     setView('home');
@@ -50,7 +58,9 @@ function App() {
   }
 
   let content;
-  if (userid && view === 'projects') {
+  if (userid === undefined) {
+    content = null; // still asking the server who is signed in
+  } else if (userid && view === 'projects') {
     content = <ProjectsPage userid={userid} onOpen={openProject} />;
   } else if (userid && view === 'project' && project) {
     content = (

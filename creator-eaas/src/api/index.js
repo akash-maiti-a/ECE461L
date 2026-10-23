@@ -15,6 +15,7 @@ async function request(path, options = {}) {
   try {
     response = await fetch(`${BASE_URL}${path}`, {
       ...options,
+      credentials: 'include', // send the sign-in cookie
       headers: { 'Content-Type': 'application/json', ...options.headers },
     });
   } catch {
@@ -61,6 +62,14 @@ export function signIn(userid, password) {
 //   200 [{ projectId, name, ownerUserid }], sorted by name
 export function listProjects() {
   return request('/api/projects');
+// GET /api/auth/me  ->  { userid }, or { userid: null } when signed out
+export function getCurrentUser() {
+  return request('/api/auth/me');
+}
+
+// POST /api/auth/signout
+export function signOut() {
+  return post('/api/auth/signout', {});
 }
 
 // POST /api/projects  { projectId, name, description, ownerUserid }

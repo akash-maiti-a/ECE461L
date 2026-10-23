@@ -32,7 +32,10 @@ def app(monkeypatch):
 
 @pytest.fixture
 def client(app):
-    return app.test_client()
+    """A browser signed in as alice (the test client keeps the cookie)."""
+    browser = app.test_client()
+    browser.post("/api/auth/signup", json={"userid": "alice", "password": "alice-pass"})
+    return browser
 
 
 @pytest.fixture
