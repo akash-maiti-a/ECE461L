@@ -12,6 +12,7 @@ REQUIRED_FIELDS = ["projectId", "name", "description"]
 
 
 @projects_bp.route("", methods=["GET"])
+@login_required
 def list_projects():
     return jsonify(Project.list_all(get_db())), 200
 
@@ -20,9 +21,18 @@ def list_projects():
 @login_required
 def create_project():
     data = request.get_json(silent=True) or {}
-    missing = [field for field in REQUIRED_FIELDS if not data.get(field)]
+    # Non-strings count as missing, so a JSON object can't reach Mongo as a
+    # query operator.
+    missing = [
+        field
+        for field in REQUIRED_FIELDS
+        if not isinstance(data.get(field), str) or not data[field].strip()
+    ]
     if missing:
         return jsonify({"error": f"Missing fields: {', '.join(missing)}."}), 400
+    # /api/projects/<projectId> can't route an ID with a slash in it.
+    if "/" in data["projectId"]:
+        return jsonify({"error": "Project IDs can't contain a slash (/)."}), 400
 
     db = get_db()
     project = Project.create(

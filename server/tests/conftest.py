@@ -49,7 +49,6 @@ def make_project(client):
                 "projectId": project_id,
                 "name": f"Project {project_id}",
                 "description": "Test project",
-                "ownerUserid": "alice",
             },
         )
         assert response.status_code == 201

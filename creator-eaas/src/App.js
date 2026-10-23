@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import './App.css';
-import { getProject } from './api';
-import { getCurrentUser, signOut as endSession } from './api';
+import { getCurrentUser, getProject, signOut as endSession } from './api';
 import AuthDialog from './components/AuthDialog';
 import LandingPage from './pages/LandingPage';
 import ProjectPage from './pages/ProjectPage';

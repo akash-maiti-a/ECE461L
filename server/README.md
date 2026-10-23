@@ -83,6 +83,7 @@ Sign-up needs a password of at least 8 characters.
 | POST | `/api/auth/signin` | `{userid, password}` | `200 {userid}` | 400 missing field, 401 wrong user ID or password |
 | GET | `/api/auth/me` | | `200 {userid}` (`null` if signed out) | |
 | POST | `/api/auth/signout` | | `200 {userid: null}` | |
+| GET | `/api/projects` 🔒 | | `200` list of `{projectId, name, ownerUserid}`, sorted by name | |
 | POST | `/api/projects` 🔒 | `{projectId, name, description}` | `201` project, owned by the signed-in user | 400 missing field, 409 project ID taken |
 | GET | `/api/projects/<projectId>` 🔒 | | `200` project | 404 no such project |
 | GET | `/api/hardware` | | `200` list of hardware sets | |

@@ -14,8 +14,16 @@ auth_bp = Blueprint("auth", __name__, url_prefix="/api/auth")
 
 
 def _read_credentials():
+    """The userid and password, or None for any that is missing or not a
+    string. A JSON object like {"$ne": null} would otherwise reach Mongo as
+    a query operator and match some other user.
+    """
     data = request.get_json(silent=True) or {}
-    return data.get("userid"), data.get("password")
+    userid, password = data.get("userid"), data.get("password")
+    return (
+        userid if isinstance(userid, str) else None,
+        password if isinstance(password, str) else None,
+    )
 
 
 def _sign_in(userid):
