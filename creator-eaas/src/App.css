@@ -11,6 +11,7 @@
   --slot-empty: #9aa6b0;
   --tape-camera: #f4c430;
   --tape-audio: #79aef2;
+  --tape-note: #b8c2ca;
   --tape-ink: #17202a;
   --focus: #1f5fc4;
   --error: #a3261b;
@@ -33,6 +34,7 @@
     --slot-empty: #6d7a86;
     --tape-camera: #e9b81f;
     --tape-audio: #6fa3e8;
+    --tape-note: #8794a0;
     --focus: #8bb8ff;
     --error: #ffb4aa;
     --error-bg: #3d2522;
@@ -195,13 +197,6 @@ main {
   margin-top: 32px;
 }
 
-.signed-in-note {
-  margin-top: 32px;
-  max-width: var(--measure);
-  padding-left: 14px;
-  border-left: 4px solid var(--tape-camera);
-}
-
 /* ---------- Spike tape ---------- */
 
 /* A strip of tape with torn ends, written on in marker. */
@@ -228,6 +223,21 @@ main {
 
 .tape-HWSet2 {
   --tape-color: var(--tape-audio);
+}
+
+/* A neutral strip for notes about the shelf itself, not a hardware set. */
+.tape-note {
+  --tape-color: var(--tape-note);
+}
+
+/* Project IDs are typed by people joining a project, so they're written in
+   Archivo: Permanent Marker draws lowercase as small caps, which would make
+   "film-01" look like "FILM-01". */
+.tape.tape-id {
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-stretch: 90%;
+  letter-spacing: 0.02em;
 }
 
 .tape-HWSet2 .tape {
@@ -268,6 +278,14 @@ main {
   background: var(--tape-color);
 }
 
+/* A kit this project has out: solid ink, still tagged with its set's tape
+   color along the top so it reads as "one of ours, from this set". */
+.slot-yours {
+  border: 2px solid var(--ink);
+  background: var(--ink);
+  box-shadow: inset 0 5px 0 var(--tape-color);
+}
+
 .shelf-count {
   margin-top: 12px;
   color: var(--steel);
@@ -288,6 +306,13 @@ main {
 
 .shelf-loading {
   color: var(--steel);
+}
+
+.shelf-unavailable {
+  margin: 20px 0 24px;
+  max-width: 32ch;
+  font-size: 1.15rem;
+  line-height: 1.45;
 }
 
 /* The page's one bit of motion: kits drop onto the shelf when it loads. */
@@ -376,6 +401,155 @@ main {
   border-bottom: 1px solid var(--rule);
 }
 
+/* ---------- Inner pages ---------- */
+
+.page-section {
+  padding: clamp(32px, 6vw, 72px) var(--gutter) clamp(48px, 8vw, 96px);
+}
+
+.page-title {
+  font-size: clamp(2.2rem, 5vw, 3.5rem);
+  font-weight: 850;
+  font-stretch: 68%;
+  line-height: 1;
+}
+
+.page-section .lede {
+  margin-top: 16px;
+}
+
+/* Two alternative forms, split by a rule rather than boxed as cards. */
+.picker {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  margin-top: 48px;
+  max-width: 960px;
+}
+
+/* Scoped under .picker so these beat the shared .form rules defined later. */
+.picker .picker-option {
+  margin-top: 0;
+  padding-right: clamp(24px, 5vw, 64px);
+}
+
+.picker-option + .picker-option {
+  padding-right: 0;
+  padding-left: clamp(24px, 5vw, 64px);
+  border-left: 2px solid var(--ink);
+}
+
+.picker-option h2 {
+  font-size: 1.6rem;
+  font-weight: 800;
+}
+
+/* Fields on the page background need the lighter surface to stand out. */
+.picker .picker-option input,
+.picker .picker-option textarea {
+  background: var(--surface);
+}
+
+.field-hint {
+  margin-top: -8px;
+  font-size: 0.9rem;
+  color: var(--steel);
+}
+
+.back-link {
+  margin-bottom: 24px;
+}
+
+.project-heading {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+}
+
+.project-owner {
+  margin-top: 8px;
+  color: var(--steel);
+  font-size: 0.95rem;
+}
+
+.project-shelf {
+  margin-top: 40px;
+  max-width: 860px;
+}
+
+.shelf-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 28px;
+}
+
+.kit-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.kit-controls label {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.kit-controls input {
+  width: 5.5rem;
+  font: inherit;
+  padding: 0.6rem 0.75rem;
+  color: var(--ink);
+  background: var(--cyc);
+  border: 2px solid var(--rule);
+  border-radius: 4px;
+}
+
+.kit-controls input:focus-visible {
+  border-color: var(--focus);
+  outline: none;
+}
+
+.button-quiet:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.kit-note {
+  margin-top: 12px;
+  font-size: 0.95rem;
+}
+
+/* Success uses the set's tape as a marker rather than a green box, so it
+   reads as a note about that shelf. */
+.kit-note-success {
+  padding-left: 12px;
+  border-left: 4px solid var(--tape-color);
+}
+
+.shelf-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  margin-top: 24px;
+  font-size: 0.85rem;
+  color: var(--steel);
+}
+
+.shelf-legend > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.legend-swatch {
+  display: inline-block;
+  width: 14px;
+  aspect-ratio: 3 / 4;
+  animation: none;
+}
+
 /* ---------- Dialog ---------- */
 
 .dialog-backdrop {
@@ -418,7 +592,8 @@ main {
   font-weight: 600;
 }
 
-.form input {
+.form input,
+.form textarea {
   font: inherit;
   font-weight: 400;
   padding: 0.6rem 0.75rem;
@@ -428,7 +603,12 @@ main {
   border-radius: 4px;
 }
 
-.form input:focus-visible {
+.form textarea {
+  resize: vertical;
+}
+
+.form input:focus-visible,
+.form textarea:focus-visible {
   border-color: var(--focus);
   outline: none;
 }
@@ -466,6 +646,25 @@ main {
   }
 }
 
+@media (max-width: 720px) {
+  .picker {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 40px;
+  }
+
+  /* Same .picker scoping as the desktop rules, so these actually win. */
+  .picker .picker-option,
+  .picker .picker-option + .picker-option {
+    padding: 0;
+    border-left: none;
+  }
+
+  .picker .picker-option + .picker-option {
+    padding-top: 40px;
+    border-top: 2px solid var(--ink);
+  }
+}
+
 @media (max-width: 560px) {
   .step-list,
   .kit-list {
@@ -478,5 +677,21 @@ main {
 
   .session span {
     display: none;
+  }
+
+  /* Label and a full-width box on top, the two actions side by side below,
+     so Check in never wraps away from Check out. */
+  .kit-controls {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .kit-controls label,
+  .kit-controls input {
+    grid-column: 1 / -1;
+  }
+
+  .kit-controls input {
+    width: 100%;
   }
 }
