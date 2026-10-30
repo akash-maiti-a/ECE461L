@@ -51,19 +51,23 @@ database.
 |---|---|
 | `app.py` | Builds the Flask app: config, database connection, seeding, routes. |
 | `config.py` | Reads settings from environment variables and `.env`. |
-| `extensions.py` | Holds the one shared database connection. |
+| `extensions.py` | Holds the one shared Mongo connection and maps each collection to its database. |
 | `models/` | One class per collection. The only code that queries MongoDB. |
 | `routes/` | One Flask blueprint per group of endpoints. Validates input, calls models, returns JSON. |
 | `tests/` | PyTest suite. |
 
 ## Data
 
-| Collection | One document holds |
-|---|---|
-| `users` | `userid` and a hashed password (never the plain password) |
-| `projects` | `projectId`, `name`, `description`, `ownerUserid`, `members` (userids who can use it, owner first), and `checkedOut`: kits out per set, like `{"HWSet1": 3}` |
-| `hardware_sets` | `setId`, `name`, `capacity`, `available`, `contents` |
-| `checkout_records` | History: `projectId`, `setId`, `quantity`, `action` (`checkout` or `checkin`), `at` |
+Users, projects, and hardware are kept in separate databases. The mapping
+is `DATABASES` in `extensions.py`; any database name in `MONGO_URI` is
+ignored.
+
+| Database | Collection | One document holds |
+|---|---|---|
+| `haas_users` | `users` | `userid` and a hashed password (never the plain password) |
+| `haas_projects` | `projects` | `projectId`, `name`, `description`, `ownerUserid`, `members` (userids who can use it, owner first), and `checkedOut`: kits out per set, like `{"HWSet1": 3}` |
+| `haas_hardware` | `hardware_sets` | `setId`, `name`, `capacity`, `available`, `contents` |
+| `haas_hardware` | `checkout_records` | History: `projectId`, `setId`, `quantity`, `action` (`checkout` or `checkin`), `at` |
 
 Hardware sets are created on startup from `Hardware.DEFAULT_SETS` in
 `models/hardware.py`. Restarting refreshes names and contents but never

@@ -3,17 +3,44 @@
 Routes and models call get_db() to reach the database rather than each
 creating their own connection. This also gives tests a single seam
 (extensions.MongoClient) to swap in an in-memory database.
+
+Users, projects, and hardware each live in their own MongoDB database.
+get_db() returns a router, so models still write db["users"] and land in
+the right database without knowing about the split.
 """
 
 from pymongo import MongoClient
+
+# Collection name -> database it lives in. Checkout history sits with the
+# hardware sets it describes.
+DATABASES = {
+    "users": "haas_users",
+    "projects": "haas_projects",
+    "hardware_sets": "haas_hardware",
+    "checkout_records": "haas_hardware",
+}
 
 _client = None
 _db = None
 
 
+class DatabaseRouter:
+    """Looks like a single pymongo Database for db[collection_name], but
+    sends each collection to the database named in DATABASES.
+    """
+
+    def __init__(self, client):
+        self.client = client
+
+    def __getitem__(self, collection_name):
+        if collection_name not in DATABASES:
+            raise KeyError(f'No database configured for collection "{collection_name}".')
+        return self.client[DATABASES[collection_name]][collection_name]
+
+
 def init_db(app):
     """Connect to Mongo using the app's configured URI and store the
-    database handle for the rest of the app to use. Called once, from
+    database router for the rest of the app to use. Called once, from
     create_app().
     """
     global _client, _db
@@ -21,12 +48,9 @@ def init_db(app):
         import mongomock
 
         _client = mongomock.MongoClient()
-        _db = _client["haas_db"]
-        return _db
-    mongo_uri = app.config["MONGO_URI"]
-    _client = MongoClient(mongo_uri)
-    # Atlas URIs often end at the host with no database name; use haas_db then.
-    _db = _client.get_default_database("haas_db")
+    else:
+        _client = MongoClient(app.config["MONGO_URI"])
+    _db = DatabaseRouter(_client)
     return _db
 
 
