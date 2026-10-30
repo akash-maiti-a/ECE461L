@@ -2,14 +2,15 @@
 
 Run locally with:  python app.py
 (requires a Mongo instance reachable at MONGO_URI, see .env.example,
-or USE_MOCK_DB=1 for an in-memory database)
+or USE_MOCK_DB=1 for an in-memory database). Accounts and projects are
+stored in separate databases.
 """
 
 from flask import Flask
 from flask_cors import CORS
 
 from config import Config
-from extensions import init_db
+from extensions import get_projects_db, init_db
 from models.hardware import Hardware
 from routes.auth import auth_bp
 from routes.hardware import hardware_bp
@@ -29,8 +30,8 @@ def create_app(config_class=Config):
     # API from a different origin.
     CORS(app, supports_credentials=True)
 
-    db = init_db(app)
-    Hardware.seed(db)
+    init_db(app)
+    Hardware.seed(get_projects_db())
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(projects_bp)
@@ -39,7 +40,11 @@ def create_app(config_class=Config):
 
     @app.route("/api/health")
     def health():
-        return {"status": "ok"}, 200
+        return {
+            "status": "ok",
+            "usersDb": app.config["USERS_DB_NAME"],
+            "projectsDb": app.config["PROJECTS_DB_NAME"],
+        }, 200
 
     return app
 

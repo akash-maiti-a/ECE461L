@@ -6,7 +6,7 @@ since the UI shows them to users as-is.
 
 from flask import Blueprint, jsonify, request, session
 
-from extensions import get_db
+from extensions import get_users_db
 from models.user import User
 from session_auth import current_userid
 
@@ -40,7 +40,7 @@ def signup():
     if len(password) < 8:
         return jsonify({"error": "Use a password with at least 8 characters."}), 400
 
-    db = get_db()
+    db = get_users_db()
     created = User.create(db, userid, password)
     if not created:
         return jsonify({"error": "That user ID is taken. Try another one."}), 409
@@ -54,7 +54,7 @@ def signin():
     if not userid or not password:
         return jsonify({"error": "Enter a user ID and a password."}), 400
 
-    db = get_db()
+    db = get_users_db()
     if User.verify(db, userid, password):
         _sign_in(userid)
         return jsonify({"userid": userid}), 200

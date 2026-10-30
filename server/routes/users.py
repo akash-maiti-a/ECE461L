@@ -2,7 +2,7 @@
 
 from flask import Blueprint, jsonify, request
 
-from extensions import get_db
+from extensions import get_users_db
 from models.user import User
 from session_auth import login_required
 
@@ -23,4 +23,4 @@ def search_users():
     query = query.strip()
     if len(query) > 64:
         return jsonify({"error": "That user ID is too long."}), 400
-    return jsonify(User.search(get_db(), query)), 200
+    return jsonify(User.search(get_users_db(), query)), 200

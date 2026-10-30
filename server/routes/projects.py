@@ -2,7 +2,7 @@
 
 from flask import Blueprint, jsonify, request
 
-from extensions import get_db
+from extensions import get_projects_db, get_users_db
 from models.project import Project
 from models.user import User
 from session_auth import current_userid, login_required
@@ -23,7 +23,7 @@ def _load_member_project(project_id):
     Returns (project, error_response). error_response is None when the
     caller may use the project.
     """
-    project = Project.get(get_db(), project_id)
+    project = Project.get(get_projects_db(), project_id)
     if not project:
         return None, (jsonify({"error": f'No project has the ID "{project_id}".'}), 404)
     if not Project.has_access(project, current_userid()):
@@ -46,7 +46,7 @@ def _read_userid():
 @projects_bp.route("", methods=["GET"])
 @login_required
 def list_projects():
-    return jsonify(Project.list_for(get_db(), current_userid())), 200
+    return jsonify(Project.list_for(get_projects_db(), current_userid())), 200
 
 
 @projects_bp.route("", methods=["POST"])
@@ -66,7 +66,7 @@ def create_project():
     if "/" in data["projectId"]:
         return jsonify({"error": "Project IDs can't contain a slash (/)."}), 400
 
-    db = get_db()
+    db = get_projects_db()
     project = Project.create(
         db, data["projectId"], data["name"], data["description"], current_userid()
     )
@@ -96,13 +96,12 @@ def share_project(project_id):
     if not userid:
         return jsonify({"error": "Enter a user ID."}), 400
 
-    db = get_db()
-    account = User.find(db, userid)
+    account = User.find(get_users_db(), userid)
     if not account:
         return jsonify({"error": f'No account has the user ID "{userid}".'}), 404
 
     # Store the userid as it was created, not whatever case was typed.
-    updated = Project.add_member(db, project_id, account["userid"])
+    updated = Project.add_member(get_projects_db(), project_id, account["userid"])
     if not updated:
         return jsonify({"error": f'{account["userid"]} is already on this project.'}), 409
     return jsonify(updated), 200
@@ -118,7 +117,7 @@ def unshare_project(project_id, member_id):
     if member_id == project.get("ownerUserid"):
         return jsonify({"error": "The owner stays on the project."}), 400
 
-    updated = Project.remove_member(get_db(), project_id, member_id)
+    updated = Project.remove_member(get_projects_db(), project_id, member_id)
     if not updated:
         return jsonify({"error": f'{member_id} isn’t on this project.'}), 404
     return jsonify(updated), 200

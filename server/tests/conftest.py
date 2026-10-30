@@ -26,6 +26,10 @@ def app(monkeypatch):
     # Ignore any Atlas URI in .env: a mongodb+srv:// URI makes even mongomock
     # do a DNS lookup, which slows every test and needs the network.
     monkeypatch.setattr(Config, "MONGO_URI", "mongodb://localhost:27017/haas_db")
+    monkeypatch.setattr(Config, "USERS_MONGO_URI", None)
+    monkeypatch.setattr(Config, "PROJECTS_MONGO_URI", None)
+    monkeypatch.setattr(Config, "USERS_DB_NAME", "haas_users")
+    monkeypatch.setattr(Config, "PROJECTS_DB_NAME", "haas_projects")
     flask_app = create_app()
     yield flask_app
 

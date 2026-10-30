@@ -52,7 +52,7 @@ def test_reseeding_keeps_live_availability(client, make_project):
     checkout(client, project_id, "HWSet1", 4)
 
     # Simulates the server restarting, which runs seed() again.
-    Hardware.seed(extensions.get_db())
+    Hardware.seed(extensions.get_projects_db())
 
     hardware = hardware_by_id(client.get("/api/hardware"))
     assert hardware["HWSet1"]["available"] == 6
@@ -163,7 +163,7 @@ def test_checkouts_and_checkins_are_logged(client, make_project):
     checkin(client, project_id, "HWSet1", 1)
     checkin(client, project_id, "HWSet1", 5)  # rejected, so not logged
 
-    history = CheckoutRecord.for_project(extensions.get_db(), project_id)
+    history = CheckoutRecord.for_project(extensions.get_projects_db(), project_id)
 
     assert [(h["action"], h["setId"], h["quantity"]) for h in history] == [
         ("checkout", "HWSet1", 2),

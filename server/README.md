@@ -26,7 +26,9 @@ USE_MOCK_DB=1 python app.py
 ```
 
 Against a real MongoDB, local or a free MongoDB Atlas cluster, set
-`MONGO_URI` in `.env` and run:
+`MONGO_URI` in `.env` and run. Accounts are stored in `haas_users` and
+projects in `haas_projects`. Set `USERS_MONGO_URI` and `PROJECTS_MONGO_URI`
+to put those databases on different clusters:
 
 ```bash
 python app.py
@@ -51,19 +53,23 @@ database.
 |---|---|
 | `app.py` | Builds the Flask app: config, database connection, seeding, routes. |
 | `config.py` | Reads settings from environment variables and `.env`. |
-| `extensions.py` | Holds the one shared database connection. |
+| `extensions.py` | Holds the users database connection and the projects database connection. |
 | `models/` | One class per collection. The only code that queries MongoDB. |
 | `routes/` | One Flask blueprint per group of endpoints. Validates input, calls models, returns JSON. |
 | `tests/` | PyTest suite. |
 
 ## Data
 
-| Collection | One document holds |
-|---|---|
-| `users` | `userid` and a hashed password (never the plain password) |
-| `projects` | `projectId`, `name`, `description`, `ownerUserid`, `members` (userids who can use it, owner first), and `checkedOut`: kits out per set, like `{"HWSet1": 3}` |
-| `hardware_sets` | `setId`, `name`, `capacity`, `available`, `contents` |
-| `checkout_records` | History: `projectId`, `setId`, `quantity`, `action` (`checkout` or `checkin`), `at` |
+Accounts and projects are separate databases. With one `MONGO_URI` they share a cluster and use different database names. With `USERS_MONGO_URI` and `PROJECTS_MONGO_URI` they are different clusters. The database name inside a URI is ignored.
+
+| Database | Collection | One document holds |
+|---|---|---|
+| `haas_users` | `users` | `userid` and a hashed password (never the plain password) |
+| `haas_projects` | `projects` | `projectId`, `name`, `description`, `ownerUserid`, `members` (userids who can use it, owner first), and `checkedOut`: kits out per set, like `{"HWSet1": 3}` |
+| `haas_projects` | `hardware_sets` | `setId`, `name`, `capacity`, `available`, `contents` |
+| `haas_projects` | `checkout_records` | History: `projectId`, `setId`, `quantity`, `action` (`checkout` or `checkin`), `at` |
+
+Documents already stored in the old `haas_db` database are not copied over.
 
 Hardware sets are created on startup from `Hardware.DEFAULT_SETS` in
 `models/hardware.py`. Restarting refreshes names and contents but never
@@ -78,7 +84,7 @@ Sign-up needs a password of at least 8 characters.
 
 | Method | Path | Body | Success | Errors |
 |---|---|---|---|---|
-| GET | `/api/health` | | `200 {status}` | |
+| GET | `/api/health` | | `200 {status, usersDb, projectsDb}` | |
 | POST | `/api/auth/signup` | `{userid, password}` | `201 {userid}` | 400 missing field, 409 user ID taken |
 | POST | `/api/auth/signin` | `{userid, password}` | `200 {userid}` | 400 missing field, 401 wrong user ID or password |
 | GET | `/api/auth/me` | | `200 {userid}` (`null` if signed out) | |
