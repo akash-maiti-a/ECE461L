@@ -6,6 +6,11 @@ Field names are camelCase to match the frontend's API contract
 Each project also keeps a running tally of the kits it has out, e.g.
 {"checkedOut": {"HWSet1": 3}}. That tally is what stops a project from
 checking in more kits than it borrowed (SR8).
+
+`members` is the crew: userids who can see the project and check kits
+in and out. The owner is always first. Projects created before sharing
+have no `members` field; those are visible only to their owner until
+someone is added.
 """
 
 
@@ -25,6 +30,7 @@ class Project:
             "name": name,
             "description": description,
             "ownerUserid": owner_userid,
+            "members": [owner_userid],
             "checkedOut": {},
         }
         collection.insert_one(doc)
@@ -39,18 +45,96 @@ class Project:
         return db[Project.collection_name].find_one({"projectId": project_id}, {"_id": 0})
 
     @staticmethod
-    def list_all(db):
-        """Every project's ID, name, and owner, sorted by name. Feeds the
-        frontend's project dropdowns, so it leaves out descriptions and
-        checkout tallies.
+    def member_ids(doc):
+        """Userids who can use this project, owner first.
+
+        A missing or malformed `members` list means just the owner, which
+        is how projects stored before sharing still behave.
+        """
+        owner = doc.get("ownerUserid")
+        members = []
+        if isinstance(owner, str) and owner:
+            members.append(owner)
+        raw = doc.get("members")
+        if isinstance(raw, list):
+            for userid in raw:
+                if isinstance(userid, str) and userid and userid not in members:
+                    members.append(userid)
+        return members
+
+    @staticmethod
+    def has_access(doc, userid):
+        return userid in Project.member_ids(doc)
+
+    @staticmethod
+    def public(doc, summary=False):
+        """The document the API returns. `summary` is the dropdown shape."""
+        members = Project.member_ids(doc)
+        if summary:
+            return {
+                "projectId": doc.get("projectId"),
+                "name": doc.get("name", ""),
+                "ownerUserid": doc.get("ownerUserid"),
+                "members": members,
+            }
+        out = {key: value for key, value in doc.items() if key != "_id"}
+        out["members"] = members
+        out.setdefault("checkedOut", {})
+        return out
+
+    @staticmethod
+    def list_for(db, userid):
+        """Projects this user owns or was shared onto, sorted by name.
+
+        Feeds the frontend's project dropdowns, so it leaves out
+        descriptions and checkout tallies.
         """
         cursor = db[Project.collection_name].find(
-            {}, {"_id": 0, "projectId": 1, "name": 1, "ownerUserid": 1}
+            {"$or": [{"ownerUserid": userid}, {"members": userid}]},
+            {"_id": 0, "projectId": 1, "name": 1, "ownerUserid": 1, "members": 1},
         )
         # str() so one odd document (say, added by hand in Atlas) can't break sorting.
-        return sorted(
+        projects = sorted(
             cursor, key=lambda p: (str(p.get("name", "")).lower(), str(p.get("projectId")))
         )
+        return [Project.public(project, summary=True) for project in projects]
+
+    @staticmethod
+    def add_member(db, project_id, userid):
+        """Add a userid to the crew. Returns the updated project, or None
+        if that person is already on it. The caller has already checked
+        that the project and the account both exist.
+        """
+        project = Project.get(db, project_id)
+        members = Project.member_ids(project)
+        if userid in members:
+            return None
+        members.append(userid)
+        db[Project.collection_name].update_one(
+            {"projectId": project_id}, {"$set": {"members": members}}
+        )
+        project["members"] = members
+        return Project.public(project)
+
+    @staticmethod
+    def remove_member(db, project_id, userid):
+        """Remove a userid from the crew.
+
+        Returns the updated project, or None if the owner was the target
+        (the owner always stays) or that userid was not a member.
+        """
+        project = Project.get(db, project_id)
+        if userid == project.get("ownerUserid"):
+            return None
+        members = Project.member_ids(project)
+        if userid not in members:
+            return None
+        members.remove(userid)
+        db[Project.collection_name].update_one(
+            {"projectId": project_id}, {"$set": {"members": members}}
+        )
+        project["members"] = members
+        return Project.public(project)
 
     @staticmethod
     def add_checked_out(db, project_id, set_id, quantity):

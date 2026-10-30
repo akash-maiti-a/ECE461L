@@ -508,6 +508,76 @@ main {
   font-size: 0.95rem;
 }
 
+.project-share {
+  margin-top: 28px;
+  max-width: 32rem;
+}
+
+.project-share h2 {
+  font-size: 1.15rem;
+  font-weight: 800;
+}
+
+.crew-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.crew-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.share-form {
+  margin-top: 16px;
+}
+
+.share-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.share-row label {
+  flex: 1 1 12rem;
+}
+
+.share-form .field-hint {
+  margin-top: 0;
+}
+
+.user-matches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.user-matches button {
+  font: inherit;
+  font-weight: 600;
+  padding: 0.35rem 0.7rem;
+  color: var(--ink);
+  background: var(--surface);
+  border: 2px solid var(--ink);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.user-matches button:hover,
+.user-matches button:focus-visible {
+  background: var(--cyc);
+}
+
 .project-shelf {
   margin-top: 40px;
   max-width: 860px;

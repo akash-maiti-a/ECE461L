@@ -23,7 +23,8 @@ function useProjectList() {
 }
 
 // The dropdown's options, the signed-in user's projects first:
-// "Spring short film (film-01)".
+// "Spring short film (film-01)". Projects someone else owns show up only
+// when that person shared them (members includes the signed-in user).
 export function ProjectOptions({ projects, userid }) {
   const option = (p) => (
     <option key={p.projectId} value={p.projectId}>
@@ -31,16 +32,25 @@ export function ProjectOptions({ projects, userid }) {
     </option>
   );
   const yours = projects.filter((p) => p.ownerUserid === userid);
-  const others = projects.filter((p) => p.ownerUserid !== userid);
-  if (yours.length === 0 || others.length === 0) {
+  const shared = projects.filter(
+    (p) => p.ownerUserid !== userid && (p.members || []).includes(userid)
+  );
+  const others = projects.filter(
+    (p) => p.ownerUserid !== userid && !(p.members || []).includes(userid)
+  );
+  const groups = [
+    ['Your projects', yours],
+    ['Shared with you', shared],
+    ['Other projects', others],
+  ].filter(([, list]) => list.length > 0);
+  if (groups.length <= 1) {
     return projects.map(option);
   }
-  return (
-    <>
-      <optgroup label="Your projects">{yours.map(option)}</optgroup>
-      <optgroup label="Other projects">{others.map(option)}</optgroup>
-    </>
-  );
+  return groups.map(([label, list]) => (
+    <optgroup key={label} label={label}>
+      {list.map(option)}
+    </optgroup>
+  ));
 }
 
 export default useProjectList;

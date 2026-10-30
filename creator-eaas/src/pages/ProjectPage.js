@@ -1,5 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
-import { checkIn, checkOut, getHardware, getProject } from '../api';
+import {
+  checkIn,
+  checkOut,
+  getHardware,
+  getProject,
+  searchUsers,
+  shareProject,
+  unshareProject,
+} from '../api';
 import { ShelfUnavailable, Slots } from '../components/ShelfBoard';
 import useProjectList, { ProjectOptions } from '../useProjectList';
 
@@ -65,6 +73,7 @@ function ProjectPage({ project: openedProject, userid, onBack, onSwitch }) {
       </div>
       <p className="lede">{project.description}</p>
       <p className="project-owner">Created by {project.ownerUserid}</p>
+      <ShareProject project={project} userid={userid} onChange={setProject} />
 
       <div className="project-shelf">
         {failed ? (
@@ -101,6 +110,138 @@ function ProjectPage({ project: openedProject, userid, onBack, onSwitch }) {
           </figure>
         )}
       </div>
+    </section>
+  );
+}
+
+// Who is on the project, and a field that suggests existing accounts as
+// you type (GET /api/users reads them from MongoDB).
+function ShareProject({ project, userid, onChange }) {
+  const [query, setQuery] = useState('');
+  const [matches, setMatches] = useState(null);
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  const members = project.members?.length ? project.members : [project.ownerUserid];
+  const isOwner = userid === project.ownerUserid;
+
+  useEffect(() => {
+    const q = query.trim();
+    if (!q) {
+      setMatches(null);
+      return undefined;
+    }
+    let cancelled = false;
+    searchUsers(q)
+      .then((users) => {
+        if (!cancelled) setMatches(users);
+      })
+      .catch(() => {
+        if (!cancelled) setMatches([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [query]);
+
+  const suggestions = (matches || []).filter((user) => !members.includes(user.userid));
+
+  async function share(event) {
+    event.preventDefault();
+    const target = query.trim();
+    if (!target) return;
+    setError('');
+    setBusy(true);
+    try {
+      onChange(await shareProject(project.projectId, target));
+      setQuery('');
+      setMatches(null);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function remove(memberId) {
+    setError('');
+    setBusy(true);
+    try {
+      onChange(await unshareProject(project.projectId, memberId));
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className="project-share" aria-labelledby="share-title">
+      <h2 id="share-title">Crew</h2>
+      <ul className="crew-list" aria-label="Project crew">
+        {members.map((memberId) => {
+          const notes = [];
+          if (memberId === project.ownerUserid) notes.push('owner');
+          if (memberId === userid) notes.push('you');
+          const label = notes.length ? `${memberId} (${notes.join(', ')})` : memberId;
+          return (
+            <li key={memberId}>
+              <span>{label}</span>
+              {isOwner && memberId !== project.ownerUserid && (
+                <button
+                  type="button"
+                  className="button-link"
+                  disabled={busy}
+                  onClick={() => remove(memberId)}
+                >
+                  Remove {memberId}
+                </button>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+      <form className="form share-form" onSubmit={share} aria-label="Share this project">
+        <div className="share-row">
+          <label>
+            User ID
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              aria-describedby="share-hint"
+              aria-autocomplete="list"
+              aria-controls="user-matches"
+              autoCapitalize="off"
+              spellCheck="false"
+            />
+          </label>
+          <button type="submit" className="button-primary" disabled={busy || !query.trim()}>
+            {busy && query.trim() ? 'Sharing…' : 'Share'}
+          </button>
+        </div>
+        <p id="share-hint" className="field-hint">
+          Start typing a user ID. Suggestions are accounts already in the database.
+        </p>
+        {suggestions.length > 0 && (
+          <ul className="user-matches" id="user-matches" role="listbox" aria-label="Matching accounts">
+            {suggestions.map((user) => (
+              <li key={user.userid}>
+                <button type="button" role="option" onClick={() => setQuery(user.userid)}>
+                  {user.userid}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+        {matches && suggestions.length === 0 && (
+          <p className="field-hint">No other account starts with that.</p>
+        )}
+        {error && (
+          <p className="form-error" role="alert">
+            {error}
+          </p>
+        )}
+      </form>
     </section>
   );
 }
