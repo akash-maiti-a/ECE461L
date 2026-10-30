@@ -1,36 +1,60 @@
-"""Shared, app-wide resources (currently just the Mongo connection).
+"""Shared database connections.
 
-Routes and models call get_db() to reach the database rather than each
-creating their own connection. This also gives tests a single seam
-(extensions.MongoClient) to swap in an in-memory database.
+Accounts live in one database. Projects, hardware sets, and checkout
+history live in another. The two can sit on the same MongoDB cluster or
+on two different clusters, depending on the URIs in the config.
+
+Routes call get_users_db() or get_projects_db() rather than opening
+their own connections. Tests swap extensions.MongoClient for an
+in-memory stand-in.
 """
 
 from pymongo import MongoClient
 
-_client = None
-_db = None
+_users_db = None
+_projects_db = None
+
+
+def _open_client(uri, use_mock):
+    if use_mock:
+        import mongomock
+
+        return mongomock.MongoClient()
+    # Looked up on the module so tests can replace MongoClient.
+    return MongoClient(uri)
 
 
 def init_db(app):
-    """Connect to Mongo using the app's configured URI and store the
-    database handle for the rest of the app to use. Called once, from
-    create_app().
+    """Open the users database and the projects database.
+
+    When both URIs match, both databases share one connection. When they
+    differ, each cluster gets its own connection.
     """
-    global _client, _db
-    if app.config.get("USE_MOCK_DB"):
-        import mongomock
+    global _users_db, _projects_db
+    use_mock = bool(app.config.get("USE_MOCK_DB"))
+    users_uri = app.config.get("USERS_MONGO_URI") or app.config["MONGO_URI"]
+    projects_uri = app.config.get("PROJECTS_MONGO_URI") or app.config["MONGO_URI"]
 
-        _client = mongomock.MongoClient()
-        _db = _client["haas_db"]
-        return _db
-    mongo_uri = app.config["MONGO_URI"]
-    _client = MongoClient(mongo_uri)
-    # Atlas URIs often end at the host with no database name; use haas_db then.
-    _db = _client.get_default_database("haas_db")
-    return _db
+    users_client = _open_client(users_uri, use_mock)
+    if projects_uri == users_uri:
+        projects_client = users_client
+    else:
+        projects_client = _open_client(projects_uri, use_mock)
+
+    _users_db = users_client[app.config["USERS_DB_NAME"]]
+    _projects_db = projects_client[app.config["PROJECTS_DB_NAME"]]
+    return _users_db, _projects_db
 
 
-def get_db():
-    if _db is None:
+def get_users_db():
+    """The database that holds the users collection."""
+    if _users_db is None:
         raise RuntimeError("Database not initialized. Call init_db(app) first.")
-    return _db
+    return _users_db
+
+
+def get_projects_db():
+    """The database that holds projects, hardware sets, and checkout history."""
+    if _projects_db is None:
+        raise RuntimeError("Database not initialized. Call init_db(app) first.")
+    return _projects_db

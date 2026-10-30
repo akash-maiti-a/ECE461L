@@ -16,11 +16,19 @@ class Config:
     """
 
     # MONGODB_URI is the name MongoDB Atlas's onboarding writes into .env.
+    # A database name in this URI is ignored. Accounts and projects use
+    # USERS_DB_NAME and PROJECTS_DB_NAME so they stay in separate databases.
     MONGO_URI = (
         os.environ.get("MONGO_URI")
         or os.environ.get("MONGODB_URI")
-        or "mongodb://localhost:27017/haas_db"
+        or "mongodb://localhost:27017"
     )
+    # Set these to put accounts and projects on different clusters.
+    # Left unset, both use MONGO_URI.
+    USERS_MONGO_URI = os.environ.get("USERS_MONGO_URI") or None
+    PROJECTS_MONGO_URI = os.environ.get("PROJECTS_MONGO_URI") or None
+    USERS_DB_NAME = os.environ.get("USERS_DB_NAME") or "haas_users"
+    PROJECTS_DB_NAME = os.environ.get("PROJECTS_DB_NAME") or "haas_projects"
     SECRET_KEY = os.environ.get("SECRET_KEY", "dev-secret-key")
     # Port 5000 is taken by AirPlay Receiver on recent macOS, so default to 5001.
     PORT = int(os.environ.get("PORT", "5001"))

@@ -130,7 +130,7 @@ def test_user_search_suggests_existing_accounts(app, client):
 
 
 def test_projects_stored_before_sharing_stay_with_their_owner(app, client):
-    extensions.get_db()["projects"].insert_one(
+    extensions.get_projects_db()["projects"].insert_one(
         {
             "projectId": "old",
             "name": "Old shoot",

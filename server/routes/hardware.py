@@ -2,7 +2,7 @@
 
 from flask import Blueprint, jsonify, request
 
-from extensions import get_db
+from extensions import get_projects_db
 from models.checkout_record import CheckoutRecord
 from models.hardware import Hardware
 from models.project import Project
@@ -58,7 +58,7 @@ def _parse_request(db):
 @hardware_bp.route("", methods=["GET"])
 def list_hardware():
     """Capacity and availability for every hardware set (SR5)."""
-    db = get_db()
+    db = get_projects_db()
     return jsonify(Hardware.list_all(db)), 200
 
 
@@ -66,7 +66,7 @@ def list_hardware():
 @login_required
 def checkout():
     """Check out a quantity of a hardware set for a project (SR7)."""
-    db = get_db()
+    db = get_projects_db()
     project_id, hardware_set, quantity, error = _parse_request(db)
     if error:
         return error
@@ -88,7 +88,7 @@ def checkout():
 @login_required
 def checkin():
     """Check in a quantity of a hardware set, freeing it back up (SR8)."""
-    db = get_db()
+    db = get_projects_db()
     project_id, hardware_set, quantity, error = _parse_request(db)
     if error:
         return error
