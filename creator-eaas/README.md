@@ -48,7 +48,7 @@ The tests don't need the API running:
 | `src/App.js` | The shell: header, footer, sign-in dialog. Tracks who's signed in, which page is showing, and the open project. |
 | `src/pages/LandingPage.js` | The front page: hero with the live shelf, how borrowing works, kit contents. |
 | `src/pages/ProjectsPage.js` | Start a new project or join one by ID. |
-| `src/pages/ProjectPage.js` | One project: its shelf per kit, and check-out and check-in controls. |
+| `src/pages/ProjectPage.js` | One project: its crew (share with an account from the database), its shelf per kit, and check-out and check-in controls. |
 | `src/components/ShelfBoard.js` | The shelf drawing (`Slots`), the landing page's shelf board, and the "Count unavailable" state. |
 | `src/components/AuthDialog.js` | The sign-in and new-user dialog. |
 | `src/useSessionState.js` | Keeps sign-in and the current page across a refresh (per browser tab). |

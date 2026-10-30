@@ -9,8 +9,8 @@ function ProjectsPage({ userid, onOpen }) {
     <section className="page-section">
       <h1 className="page-title">Open a project</h1>
       <p className="lede">
-        Kits are checked out to projects, not people. Start one for your crew, or pick the one
-        your crew already made.
+        Kits are checked out to projects, not people. Start one for your crew, or open one
+        that was shared with you.
       </p>
       <div className="picker">
         <CreateProjectForm onCreated={onOpen} />
@@ -137,7 +137,9 @@ function JoinProjectForm({ userid, onFound }) {
       </>
     );
   } else if (projects && projects.length === 0) {
-    field = <p className="field-hint">No projects yet. Start the first one.</p>;
+    field = (
+      <p className="field-hint">No projects yet. Start one, or ask a teammate to share theirs.</p>
+    );
   } else {
     field = (
       <label>

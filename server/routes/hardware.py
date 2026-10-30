@@ -6,7 +6,8 @@ from extensions import get_db
 from models.checkout_record import CheckoutRecord
 from models.hardware import Hardware
 from models.project import Project
-from session_auth import login_required
+from routes.projects import NOT_SHARED
+from session_auth import current_userid, login_required
 
 hardware_bp = Blueprint("hardware", __name__, url_prefix="/api/hardware")
 
@@ -45,8 +46,11 @@ def _parse_request(db):
     if not hardware_set:
         return None, None, None, (jsonify({"error": f'Unknown hardware set "{set_id}".'}), 404)
 
-    if not Project.get(db, project_id):
+    project = Project.get(db, project_id)
+    if not project:
         return None, None, None, (jsonify({"error": f'No project has the ID "{project_id}".'}), 404)
+    if not Project.has_access(project, current_userid()):
+        return None, None, None, (jsonify({"error": NOT_SHARED}), 403)
 
     return project_id, hardware_set, quantity, None
 

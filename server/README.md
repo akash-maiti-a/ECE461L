@@ -61,7 +61,7 @@ database.
 | Collection | One document holds |
 |---|---|
 | `users` | `userid` and a hashed password (never the plain password) |
-| `projects` | `projectId`, `name`, `description`, `ownerUserid`, and `checkedOut`: kits out per set, like `{"HWSet1": 3}` |
+| `projects` | `projectId`, `name`, `description`, `ownerUserid`, `members` (userids who can use it, owner first), and `checkedOut`: kits out per set, like `{"HWSet1": 3}` |
 | `hardware_sets` | `setId`, `name`, `capacity`, `available`, `contents` |
 | `checkout_records` | History: `projectId`, `setId`, `quantity`, `action` (`checkout` or `checkin`), `at` |
 
@@ -83,12 +83,15 @@ Sign-up needs a password of at least 8 characters.
 | POST | `/api/auth/signin` | `{userid, password}` | `200 {userid}` | 400 missing field, 401 wrong user ID or password |
 | GET | `/api/auth/me` | | `200 {userid}` (`null` if signed out) | |
 | POST | `/api/auth/signout` | | `200 {userid: null}` | |
-| GET | `/api/projects` 🔒 | | `200` list of `{projectId, name, ownerUserid}`, sorted by name | |
-| POST | `/api/projects` 🔒 | `{projectId, name, description}` | `201` project, owned by the signed-in user | 400 missing field, 409 project ID taken |
-| GET | `/api/projects/<projectId>` 🔒 | | `200` project | 404 no such project |
+| GET | `/api/users?q=` 🔒 | | `200` up to 8 `{userid}` whose id starts with `q`. Blank `q` is `[]` | 401 signed out |
+| GET | `/api/projects` 🔒 | | `200` list of `{projectId, name, ownerUserid, members}` for projects you own or were shared onto, sorted by name | |
+| POST | `/api/projects` 🔒 | `{projectId, name, description}` | `201` project, owned by the signed-in user, `members` is just you | 400 missing field, 409 project ID taken |
+| GET | `/api/projects/<projectId>` 🔒 | | `200` project, including `members` | 404 no such project, 403 not shared with you |
+| POST | `/api/projects/<projectId>/members` 🔒 | `{userid}` | `200` updated project | 400 missing userid, 403 not on the project, 404 unknown project or user, 409 already a member |
+| DELETE | `/api/projects/<projectId>/members/<userid>` 🔒 | | `200` updated project | 400 that userid is the owner, 403 not on the project, 404 not a member |
 | GET | `/api/hardware` | | `200` list of hardware sets | |
-| POST | `/api/hardware/checkout` 🔒 | `{projectId, setId, quantity}` | `200` updated hardware list | 400 bad input, 404 unknown project or set, 409 not enough on the shelf |
-| POST | `/api/hardware/checkin` 🔒 | `{projectId, setId, quantity}` | `200` updated hardware list | 400 bad input, 404 unknown project or set, 409 more than the project has out |
+| POST | `/api/hardware/checkout` 🔒 | `{projectId, setId, quantity}` | `200` updated hardware list | 400 bad input, 403 project isn't shared with you, 404 unknown project or set, 409 not enough on the shelf |
+| POST | `/api/hardware/checkin` 🔒 | `{projectId, setId, quantity}` | `200` updated hardware list | 400 bad input, 403 project isn't shared with you, 404 unknown project or set, 409 more than the project has out |
 
 ## Rules the backend enforces
 
@@ -105,5 +108,6 @@ Sign-up needs a password of at least 8 characters.
   the project) in separate steps. If the server crashed between them, the
   counts could drift. MongoDB transactions would fix this. They need a
   replica set, which MongoDB Atlas provides.
-- Any signed-in user can open any project if they know its ID. Project
-  membership is tracked in issue #17.
+- A project is visible only to its owner and the people on `members`.
+  Documents created before sharing have no `members` field; those stay
+  visible to the owner only until someone is added.

@@ -59,9 +59,17 @@ export function signIn(userid, password) {
 }
 
 // GET /api/projects
-//   200 [{ projectId, name, ownerUserid }], sorted by name
+//   200 [{ projectId, name, ownerUserid, members }], projects the signed-in
+//   user owns or was shared onto, sorted by name
 export function listProjects() {
   return request('/api/projects');
+}
+
+// GET /api/users?q=al
+//   200 [{ userid }, ...] accounts whose user ID starts with q (at most 8).
+//   A blank q returns []. Used to autofill the share field from MongoDB.
+export function searchUsers(query) {
+  return request(`/api/users?q=${encodeURIComponent(query)}`);
 }
 
 // GET /api/auth/me  ->  { userid }, or { userid: null } when signed out
@@ -81,9 +89,25 @@ export function createProject({ projectId, name, description }) {
 }
 
 // GET /api/projects/:projectId
-//   200 project (including checkedOut, e.g. { HWSet1: 3 })  |  404 if no project has that ID
+//   200 project (including checkedOut, e.g. { HWSet1: 3 }, and members)
+//   |  404 if no project has that ID  |  403 if it isn't shared with you
 export function getProject(projectId) {
   return request(`/api/projects/${encodeURIComponent(projectId)}`);
+}
+
+// POST /api/projects/:projectId/members  { userid }
+//   200 updated project  |  404 unknown project or user  |  409 already on it
+export function shareProject(projectId, userid) {
+  return post(`/api/projects/${encodeURIComponent(projectId)}/members`, { userid });
+}
+
+// DELETE /api/projects/:projectId/members/:userid
+//   200 updated project  |  400 if that userid is the owner
+export function unshareProject(projectId, userid) {
+  return request(
+    `/api/projects/${encodeURIComponent(projectId)}/members/${encodeURIComponent(userid)}`,
+    { method: 'DELETE' }
+  );
 }
 
 // GET /api/hardware

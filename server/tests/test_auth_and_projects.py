@@ -35,11 +35,21 @@ def test_create_and_get_project(client):
     create = client.post("/api/projects", json=body)
     assert create.status_code == 201
     # New projects start with nothing checked out.
-    assert create.get_json() == {**body, "ownerUserid": "alice", "checkedOut": {}}
+    assert create.get_json() == {
+        **body,
+        "ownerUserid": "alice",
+        "members": ["alice"],
+        "checkedOut": {},
+    }
 
     get = client.get("/api/projects/proj-1")
     assert get.status_code == 200
-    assert get.get_json() == {**body, "ownerUserid": "alice", "checkedOut": {}}
+    assert get.get_json() == {
+        **body,
+        "ownerUserid": "alice",
+        "members": ["alice"],
+        "checkedOut": {},
+    }
 
 
 def test_create_project_duplicate_id_rejected(client):
@@ -79,8 +89,8 @@ def test_list_projects_returns_summaries_sorted_by_name(client):
     response = client.get("/api/projects")
     assert response.status_code == 200
     assert response.get_json() == [
-        {"projectId": "p-a", "name": "audio drama", "ownerUserid": "alice"},
-        {"projectId": "p-b", "name": "Zine shoot", "ownerUserid": "alice"},
+        {"projectId": "p-a", "name": "audio drama", "ownerUserid": "alice", "members": ["alice"]},
+        {"projectId": "p-b", "name": "Zine shoot", "ownerUserid": "alice", "members": ["alice"]},
     ]
 def test_session_survives_a_refresh_and_signout_ends_it(client):
     assert client.get("/api/auth/me").get_json() == {"userid": "alice"}

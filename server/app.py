@@ -14,6 +14,7 @@ from models.hardware import Hardware
 from routes.auth import auth_bp
 from routes.hardware import hardware_bp
 from routes.projects import projects_bp
+from routes.users import users_bp
 
 
 def create_app(config_class=Config):
@@ -34,6 +35,7 @@ def create_app(config_class=Config):
     app.register_blueprint(auth_bp)
     app.register_blueprint(projects_bp)
     app.register_blueprint(hardware_bp)
+    app.register_blueprint(users_bp)
 
     @app.route("/api/health")
     def health():
