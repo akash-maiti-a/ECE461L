@@ -508,6 +508,14 @@ main {
   font-size: 0.95rem;
 }
 
+.view-only-note {
+  margin-top: 16px;
+  max-width: 32rem;
+  padding: 10px 12px;
+  border-left: 4px solid var(--rule);
+  color: var(--steel);
+}
+
 .project-share {
   margin-top: 28px;
   max-width: 32rem;

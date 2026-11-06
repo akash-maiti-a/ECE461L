@@ -236,6 +236,24 @@ test('the join dropdown lists your projects first', async () => {
   expect(select).toHaveValue('film-01');
 });
 
+test('projects you are not on get their own group in the dropdown', async () => {
+  api.listProjects.mockResolvedValue([
+    ...PROJECT_LIST,
+    { projectId: 'zine-03', name: 'Zine shoot', ownerUserid: 'carol', members: ['carol'] },
+  ]);
+  await signInToProjects();
+
+  const select = await within(form('Join a project')).findByRole('combobox', { name: 'Project' });
+  await waitFor(() => expect(select).toBeEnabled());
+  const groups = within(select).getAllByRole('group');
+  expect(groups.map((g) => g.getAttribute('label'))).toEqual([
+    'Your projects',
+    'Shared with you',
+    'Other projects',
+  ]);
+  expect(within(groups[2]).getByRole('option')).toHaveTextContent('Zine shoot (zine-03)');
+});
+
 test('with no projects yet, the join form says so', async () => {
   api.listProjects.mockResolvedValue([]);
   await signInToProjects();
@@ -517,4 +535,25 @@ test('signing up with a short password is caught before sending', async () => {
 
   expect(screen.getByRole('alert')).toHaveTextContent('at least 8 characters');
   expect(api.signUp).not.toHaveBeenCalled();
+});
+
+test('there is no open-to-everyone switch, and a crew member sees no view-only note', async () => {
+  await openFilmProject();
+  expect(screen.queryByRole('checkbox', { name: 'Open to everyone' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('note')).not.toBeInTheDocument();
+});
+
+test('someone off the crew can view any project but not check out or share', async () => {
+  const shelf = await openFilmProject({
+    ...PROJECT,
+    ownerUserid: 'carol',
+    members: ['carol'],
+    checkedOut: { HWSet1: 2 },
+  });
+
+  expect(screen.getByRole('note')).toHaveTextContent('Ask carol to add you to the crew');
+  expect(kitRow(shelf, 'Camera kits')).toHaveTextContent('2 with this project');
+  expect(within(shelf).queryByRole('button', { name: 'Check out' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('form', { name: 'Share this project' })).not.toBeInTheDocument();
+  expect(screen.getByRole('list', { name: 'Project crew' })).toHaveTextContent('carol (owner)');
 });

@@ -10,7 +10,7 @@ function ProjectsPage({ userid, onOpen }) {
       <h1 className="page-title">Open a project</h1>
       <p className="lede">
         Kits are checked out to projects, not people. Start one for your crew, or open one
-        that was shared with you.
+        from the list. Every project is open to view; only its crew can check kits out.
       </p>
       <div className="picker">
         <CreateProjectForm onCreated={onOpen} />

@@ -23,8 +23,9 @@ function useProjectList() {
 }
 
 // The dropdown's options, the signed-in user's projects first:
-// "Spring short film (film-01)". Projects someone else owns show up only
-// when that person shared them (members includes the signed-in user).
+// "Spring short film (film-01)", then ones shared with them (members
+// includes the signed-in user), then everyone else's. Every project is open
+// to view.
 export function ProjectOptions({ projects, userid }) {
   const option = (p) => (
     <option key={p.projectId} value={p.projectId}>
