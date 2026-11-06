@@ -17,15 +17,23 @@ def _not_shared():
     return jsonify({"error": NOT_SHARED}), 403
 
 
+def _load_project(project_id):
+    """The project, or (None, 404 response) if no project has that ID."""
+    project = Project.get(get_projects_db(), project_id)
+    if not project:
+        return None, (jsonify({"error": f'No project has the ID "{project_id}".'}), 404)
+    return project, None
+
+
 def _load_member_project(project_id):
     """The project, if the signed-in user is on its crew.
 
     Returns (project, error_response). error_response is None when the
-    caller may use the project.
+    caller may change the project.
     """
-    project = Project.get(get_projects_db(), project_id)
-    if not project:
-        return None, (jsonify({"error": f'No project has the ID "{project_id}".'}), 404)
+    project, error = _load_project(project_id)
+    if error:
+        return None, error
     if not Project.has_access(project, current_userid()):
         return None, _not_shared()
     return project, None
@@ -78,7 +86,8 @@ def create_project():
 @projects_bp.route("/<project_id>", methods=["GET"])
 @login_required
 def get_project(project_id):
-    project, error = _load_member_project(project_id)
+    """Anyone signed in can see any project."""
+    project, error = _load_project(project_id)
     if error:
         return error
     return jsonify(Project.public(project)), 200

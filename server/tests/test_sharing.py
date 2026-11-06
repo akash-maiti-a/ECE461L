@@ -19,14 +19,9 @@ def make_project(client, project_id="film"):
     return response
 
 
-def test_only_the_crew_can_see_and_use_a_project(app, client):
+def test_only_the_crew_can_use_a_project(app, client):
     make_project(client)
     bob = signup(app, "bob")
-
-    assert bob.get("/api/projects").get_json() == []
-    denied = bob.get("/api/projects/film")
-    assert denied.status_code == 403
-    assert denied.get_json()["error"] == "This project isn't shared with you."
 
     checkout = bob.post(
         "/api/hardware/checkout",
@@ -47,7 +42,7 @@ def test_only_the_crew_can_see_and_use_a_project(app, client):
             "name": "Film",
             "ownerUserid": "alice",
             "members": ["alice", "bob"],
-        }
+            }
     ]
     assert bob.get("/api/projects/film").status_code == 200
     assert (
@@ -102,7 +97,6 @@ def test_owner_can_remove_a_member_but_not_themselves(app, client):
     removed = client.delete("/api/projects/film/members/bob")
     assert removed.status_code == 200
     assert removed.get_json()["members"] == ["alice"]
-    assert bob.get("/api/projects/film").status_code == 403
 
     absent = client.delete("/api/projects/film/members/bob")
     assert absent.status_code == 404
@@ -144,9 +138,15 @@ def test_projects_stored_before_sharing_stay_with_their_owner(app, client):
     assert old["members"] == ["alice"]
 
     bob = signup(app, "bob")
-    assert bob.get("/api/projects/old").status_code == 403
+    assert bob.post(
+        "/api/hardware/checkout",
+        json={"projectId": "old", "setId": "HWSet1", "quantity": 1},
+    ).status_code == 403
 
     shared = client.post("/api/projects/old/members", json={"userid": "bob"})
     assert shared.status_code == 200
     assert shared.get_json()["members"] == ["alice", "bob"]
-    assert bob.get("/api/projects/old").status_code == 200
+    assert bob.post(
+        "/api/hardware/checkout",
+        json={"projectId": "old", "setId": "HWSet1", "quantity": 1},
+    ).status_code == 200

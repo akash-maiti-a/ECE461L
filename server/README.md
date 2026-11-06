@@ -90,9 +90,9 @@ Sign-up needs a password of at least 8 characters.
 | GET | `/api/auth/me` | | `200 {userid}` (`null` if signed out) | |
 | POST | `/api/auth/signout` | | `200 {userid: null}` | |
 | GET | `/api/users?q=` 🔒 | | `200` up to 8 `{userid}` whose id starts with `q`. Blank `q` is `[]` | 401 signed out |
-| GET | `/api/projects` 🔒 | | `200` list of `{projectId, name, ownerUserid, members}` for projects you own or were shared onto, sorted by name | |
+| GET | `/api/projects` 🔒 | | `200` list of `{projectId, name, ownerUserid, members}` for every project, sorted by name | |
 | POST | `/api/projects` 🔒 | `{projectId, name, description}` | `201` project, owned by the signed-in user, `members` is just you | 400 missing field, 409 project ID taken |
-| GET | `/api/projects/<projectId>` 🔒 | | `200` project, including `members` | 404 no such project, 403 not shared with you |
+| GET | `/api/projects/<projectId>` 🔒 | | `200` project, including `members` | 404 no such project |
 | POST | `/api/projects/<projectId>/members` 🔒 | `{userid}` | `200` updated project | 400 missing userid, 403 not on the project, 404 unknown project or user, 409 already a member |
 | DELETE | `/api/projects/<projectId>/members/<userid>` 🔒 | | `200` updated project | 400 that userid is the owner, 403 not on the project, 404 not a member |
 | GET | `/api/hardware` | | `200` list of hardware sets | |
@@ -114,6 +114,7 @@ Sign-up needs a password of at least 8 characters.
   the project) in separate steps. If the server crashed between them, the
   counts could drift. MongoDB transactions would fix this. They need a
   replica set, which MongoDB Atlas provides.
-- A project is visible only to its owner and the people on `members`.
-  Documents created before sharing have no `members` field; those stay
-  visible to the owner only until someone is added.
+- Every project is open: anyone signed in can list it and view its page.
+  Only the owner and the people on `members` can check kits in and out
+  or change who is on it. Documents created before sharing have no
+  `members` field; their owner is the whole crew until someone is added.

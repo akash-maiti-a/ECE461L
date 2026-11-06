@@ -11,6 +11,10 @@ checking in more kits than it borrowed (SR8).
 in and out. The owner is always first. Projects created before sharing
 have no `members` field; those are visible only to their owner until
 someone is added.
+
+Every project is open: anyone signed in sees it in their project list
+and can view its page, read-only. Only the crew can check kits in and
+out or change who is on it.
 """
 
 
@@ -64,6 +68,7 @@ class Project:
 
     @staticmethod
     def has_access(doc, userid):
+        """Whether this user is on the crew, so may change the project."""
         return userid in Project.member_ids(doc)
 
     @staticmethod
@@ -79,18 +84,19 @@ class Project:
             }
         out = {key: value for key, value in doc.items() if key != "_id"}
         out["members"] = members
+        out.pop("open", None)
         out.setdefault("checkedOut", {})
         return out
 
     @staticmethod
     def list_for(db, userid):
-        """Projects this user owns or was shared onto, sorted by name.
+        """Every project, sorted by name. All projects are open to view.
 
         Feeds the frontend's project dropdowns, so it leaves out
         descriptions and checkout tallies.
         """
         cursor = db[Project.collection_name].find(
-            {"$or": [{"ownerUserid": userid}, {"members": userid}]},
+            {},
             {"_id": 0, "projectId": 1, "name": 1, "ownerUserid": 1, "members": 1},
         )
         # str() so one odd document (say, added by hand in Atlas) can't break sorting.

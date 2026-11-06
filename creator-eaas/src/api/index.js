@@ -59,8 +59,8 @@ export function signIn(userid, password) {
 }
 
 // GET /api/projects
-//   200 [{ projectId, name, ownerUserid, members }], projects the signed-in
-//   user owns or was shared onto, sorted by name
+//   200 [{ projectId, name, ownerUserid, members }], every project (all
+//   projects are open to view), sorted by name
 export function listProjects() {
   return request('/api/projects');
 }
@@ -90,7 +90,7 @@ export function createProject({ projectId, name, description }) {
 
 // GET /api/projects/:projectId
 //   200 project (including checkedOut, e.g. { HWSet1: 3 }, and members)
-//   |  404 if no project has that ID  |  403 if it isn't shared with you
+//   |  404 if no project has that ID. Anyone signed in can view any project.
 export function getProject(projectId) {
   return request(`/api/projects/${encodeURIComponent(projectId)}`);
 }
