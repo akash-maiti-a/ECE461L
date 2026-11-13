@@ -1,20 +1,19 @@
 import { useState } from 'react';
-import { createProject, getProject } from '../api';
-import useProjectList, { ProjectOptions } from '../useProjectList';
+import { createProject, joinProject } from '../api';
 
-// Figure 2, bottom half: start a new project or pick an existing one.
+// Figure 2, bottom half: start a new project or join an existing one.
 // The two forms are alternatives, so they sit side by side split by a rule.
-function ProjectsPage({ userid, onOpen }) {
+function ProjectsPage({ onOpen }) {
   return (
     <section className="page-section">
       <h1 className="page-title">Open a project</h1>
       <p className="lede">
-        Kits are checked out to projects, not people. Start one for your crew, or open one
-        from the list. Every project is open to view; only its crew can check kits out.
+        Kits are checked out to projects, not people. Start one for your crew, or join one
+        by entering its project ID.
       </p>
       <div className="picker">
         <CreateProjectForm onCreated={onOpen} />
-        <JoinProjectForm userid={userid} onFound={onOpen} />
+        <JoinProjectForm onJoined={onOpen} />
       </div>
     </section>
   );
@@ -100,78 +99,50 @@ function CreateProjectForm({ onCreated }) {
   );
 }
 
-function JoinProjectForm({ userid, onFound }) {
-  const { projects, failed, reload } = useProjectList();
-  const [chosen, setChosen] = useState('');
+// Type a project's ID to join it. If the ID matches a project, you're on its
+// crew and it opens; otherwise the server's message says no project has it.
+function JoinProjectForm({ onJoined }) {
+  const [projectId, setProjectId] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-
-  // Until the user picks one, open their first project (it's listed first).
-  const first = projects?.find((p) => p.ownerUserid === userid) ?? projects?.[0];
-  const projectId = chosen || first?.projectId || '';
 
   async function handleSubmit(event) {
     event.preventDefault();
     setError('');
     setBusy(true);
     try {
-      onFound(await getProject(projectId));
+      onJoined(await joinProject(projectId.trim()));
     } catch (err) {
       setError(err.message);
       setBusy(false);
     }
   }
 
-  let field;
-  if (failed) {
-    field = (
-      <>
-        <p className="form-error" role="alert">
-          The project list didn’t load.
-        </p>
-        <div>
-          <button type="button" className="button-quiet" onClick={reload}>
-            Try again
-          </button>
-        </div>
-      </>
-    );
-  } else if (projects && projects.length === 0) {
-    field = (
-      <p className="field-hint">No projects yet. Start one, or ask a teammate to share theirs.</p>
-    );
-  } else {
-    field = (
-      <label>
-        Project
-        <select
-          value={projectId}
-          onChange={(e) => setChosen(e.target.value)}
-          disabled={!projects}
-          required
-        >
-          {projects ? (
-            <ProjectOptions projects={projects} userid={userid} />
-          ) : (
-            <option value="">Loading projects…</option>
-          )}
-        </select>
-      </label>
-    );
-  }
-
   return (
     <form className="form picker-option" onSubmit={handleSubmit} aria-labelledby="join-title">
       <h2 id="join-title">Join a project</h2>
-      {field}
+      <label>
+        Project ID
+        <input
+          value={projectId}
+          onChange={(e) => setProjectId(e.target.value)}
+          aria-describedby="join-id-hint"
+          autoCapitalize="off"
+          spellCheck="false"
+          required
+        />
+      </label>
+      <p id="join-id-hint" className="field-hint">
+        Ask whoever started the project for its ID. It has to match exactly.
+      </p>
       {error && (
         <p className="form-error" role="alert">
           {error}
         </p>
       )}
       <div>
-        <button type="submit" className="button-primary" disabled={busy || !projectId}>
-          {busy ? 'Opening project…' : 'Open project'}
+        <button type="submit" className="button-primary" disabled={busy || !projectId.trim()}>
+          {busy ? 'Joining project…' : 'Join project'}
         </button>
       </div>
     </form>
