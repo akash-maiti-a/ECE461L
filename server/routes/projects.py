@@ -2,19 +2,18 @@
 
 from flask import Blueprint, jsonify, request
 
-from extensions import get_projects_db, get_users_db
+from extensions import get_projects_db
 from models.project import Project
-from models.user import User
 from session_auth import current_userid, login_required
 
 projects_bp = Blueprint("projects", __name__, url_prefix="/api/projects")
 
 REQUIRED_FIELDS = ["projectId", "name", "description"]
-NOT_SHARED = "This project isn't shared with you."
+NOT_JOINED = "You haven't joined this project. Enter its project ID under Join a project."
 
 
-def _not_shared():
-    return jsonify({"error": NOT_SHARED}), 403
+def _not_joined():
+    return jsonify({"error": NOT_JOINED}), 403
 
 
 def _load_project(project_id):
@@ -25,30 +24,6 @@ def _load_project(project_id):
     return project, None
 
 
-def _load_member_project(project_id):
-    """The project, if the signed-in user is on its crew.
-
-    Returns (project, error_response). error_response is None when the
-    caller may change the project.
-    """
-    project, error = _load_project(project_id)
-    if error:
-        return None, error
-    if not Project.has_access(project, current_userid()):
-        return None, _not_shared()
-    return project, None
-
-
-def _read_userid():
-    """A userid string from the JSON body, or None when it isn't a string.
-
-    A JSON object like {"$ne": null} must not reach Mongo as a query.
-    """
-    data = request.get_json(silent=True) or {}
-    userid = data.get("userid")
-    if not isinstance(userid, str):
-        return None
-    return userid.strip()
 
 
 @projects_bp.route("", methods=["GET"])
@@ -86,47 +61,24 @@ def create_project():
 @projects_bp.route("/<project_id>", methods=["GET"])
 @login_required
 def get_project(project_id):
-    """Anyone signed in can see any project."""
+    """Only people who created or joined the project can open it."""
     project, error = _load_project(project_id)
     if error:
         return error
+    if not Project.has_access(project, current_userid()):
+        return _not_joined()
     return jsonify(Project.public(project)), 200
 
 
-@projects_bp.route("/<project_id>/members", methods=["POST"])
+@projects_bp.route("/<project_id>/join", methods=["POST"])
 @login_required
-def share_project(project_id):
-    """Add an existing account to this project's crew."""
-    project, error = _load_member_project(project_id)
+def join_project(project_id):
+    """Join a project by typing its exact ID (SR4).
+
+    Knowing the ID is all it takes. Joining a project you're already on
+    just opens it again.
+    """
+    project, error = _load_project(project_id)
     if error:
         return error
-
-    userid = _read_userid()
-    if not userid:
-        return jsonify({"error": "Enter a user ID."}), 400
-
-    account = User.find(get_users_db(), userid)
-    if not account:
-        return jsonify({"error": f'No account has the user ID "{userid}".'}), 404
-
-    # Store the userid as it was created, not whatever case was typed.
-    updated = Project.add_member(get_projects_db(), project_id, account["userid"])
-    if not updated:
-        return jsonify({"error": f'{account["userid"]} is already on this project.'}), 409
-    return jsonify(updated), 200
-
-
-@projects_bp.route("/<project_id>/members/<member_id>", methods=["DELETE"])
-@login_required
-def unshare_project(project_id, member_id):
-    """Take someone off the crew. The owner always stays."""
-    project, error = _load_member_project(project_id)
-    if error:
-        return error
-    if member_id == project.get("ownerUserid"):
-        return jsonify({"error": "The owner stays on the project."}), 400
-
-    updated = Project.remove_member(get_projects_db(), project_id, member_id)
-    if not updated:
-        return jsonify({"error": f'{member_id} isn’t on this project.'}), 404
-    return jsonify(updated), 200
+    return jsonify(Project.add_member(get_projects_db(), project, current_userid())), 200

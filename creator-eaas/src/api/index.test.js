@@ -4,12 +4,10 @@ import {
   createProject,
   getHardware,
   getProject,
+  joinProject,
   listProjects,
-  searchUsers,
-  shareProject,
   signIn,
   signUp,
-  unshareProject,
 } from '.';
 
 // These tests replace the browser's fetch with a Jest mock, so they check
@@ -81,27 +79,13 @@ describe('requests match the backend contract', () => {
     expect(sentRequest()).toMatchObject({ url: '/api/projects', method: 'GET' });
   });
 
-  test('searchUsers encodes the query', async () => {
-    reply(200, [{ userid: 'alice' }]);
-    await expect(searchUsers('al ice')).resolves.toEqual([{ userid: 'alice' }]);
-    expect(sentRequest()).toMatchObject({ url: '/api/users?q=al%20ice', method: 'GET' });
-  });
-
-  test('shareProject and unshareProject', async () => {
-    const project = { projectId: 'film-01', members: ['alice', 'bob'] };
+  test('joinProject posts to the project ID, encoded', async () => {
+    const project = { projectId: 'film club/01', members: ['alice', 'bob'] };
     reply(200, project);
-    await expect(shareProject('film club/01', 'bob')).resolves.toEqual(project);
+    await expect(joinProject('film club/01')).resolves.toEqual(project);
     expect(sentRequest()).toMatchObject({
-      url: '/api/projects/film%20club%2F01/members',
+      url: '/api/projects/film%20club%2F01/join',
       method: 'POST',
-      body: { userid: 'bob' },
-    });
-
-    reply(200, { ...project, members: ['alice'] });
-    await unshareProject('film club/01', 'bob/x');
-    expect(sentRequest()).toMatchObject({
-      url: '/api/projects/film%20club%2F01/members/bob%2Fx',
-      method: 'DELETE',
     });
   });
 

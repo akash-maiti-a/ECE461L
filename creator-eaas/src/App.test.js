@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import App from './App';
 import * as api from './api';
 
@@ -19,9 +19,6 @@ beforeEach(() => {
   api.listProjects.mockResolvedValue(PROJECT_LIST);
   api.getCurrentUser.mockResolvedValue({ userid: null });
   api.signOut.mockResolvedValue({ userid: null });
-  api.searchUsers.mockResolvedValue([]);
-  api.shareProject.mockResolvedValue(PROJECT);
-  api.unshareProject.mockResolvedValue(PROJECT);
   // The app remembers who's signed in for the tab; start every test fresh.
   window.sessionStorage.clear();
 });
@@ -88,13 +85,11 @@ function form(name) {
   return screen.getByRole('form', { name });
 }
 
-// Picks a project in the join dropdown (once the list loads) and opens it.
-async function chooseProject(projectId) {
+// Types a project ID into the join form and submits it.
+function joinById(projectId) {
   const join = form('Join a project');
-  const select = await within(join).findByRole('combobox', { name: 'Project' });
-  await waitFor(() => expect(select).toBeEnabled());
-  fireEvent.change(select, { target: { value: projectId } });
-  fireEvent.click(within(join).getByRole('button', { name: 'Open project' }));
+  fireEvent.change(within(join).getByLabelText('Project ID'), { target: { value: projectId } });
+  fireEvent.click(within(join).getByRole('button', { name: 'Join project' }));
   return join;
 }
 
@@ -204,76 +199,38 @@ test('creating a project opens it', async () => {
   });
 });
 
-test('joining a project from the dropdown opens it', async () => {
-  api.getProject.mockResolvedValue(PROJECT);
+test('entering a matching project ID joins and opens it', async () => {
+  api.joinProject.mockResolvedValue({ ...PROJECT, members: ['bob', 'alice'], ownerUserid: 'bob' });
+  api.getProject.mockResolvedValue({ ...PROJECT, members: ['bob', 'alice'], ownerUserid: 'bob' });
   await signInToProjects();
 
-  await chooseProject('film-01');
+  joinById('  film-01 ');
 
   expect(await screen.findByRole('heading', { name: 'Spring short film' })).toBeInTheDocument();
-  expect(api.getProject).toHaveBeenCalledWith('film-01');
+  expect(api.joinProject).toHaveBeenCalledWith('film-01');
+  expect(screen.getByRole('list', { name: 'Project crew' })).toHaveTextContent('alice (you)');
+  const shelf = await screen.findByRole('figure', { name: 'Kits for this project' });
+  await within(shelf).findByText('Camera kits');
 });
 
-test('a project deleted since the list loaded shows the server’s message', async () => {
-  api.getProject.mockRejectedValue(new Error('No project has the ID "doc-02".'));
+test('a project ID that matches nothing shows the server’s message', async () => {
+  api.joinProject.mockRejectedValue(new Error('No project has the ID "nope".'));
   await signInToProjects();
 
-  const join = await chooseProject('doc-02');
+  const join = joinById('nope');
 
-  expect(await within(join).findByRole('alert')).toHaveTextContent('No project has the ID "doc-02".');
+  expect(await within(join).findByRole('alert')).toHaveTextContent('No project has the ID "nope".');
+  expect(screen.getByRole('heading', { name: 'Open a project', level: 1 })).toBeInTheDocument();
 });
 
-test('the join dropdown lists your projects first', async () => {
-  await signInToProjects();
-
-  const select = await within(form('Join a project')).findByRole('combobox', { name: 'Project' });
-  await waitFor(() => expect(select).toBeEnabled());
-  const groups = within(select).getAllByRole('group');
-  expect(groups.map((g) => g.getAttribute('label'))).toEqual(['Your projects', 'Shared with you']);
-  expect(within(groups[0]).getByRole('option')).toHaveTextContent('Spring short film (film-01)');
-  expect(within(groups[1]).getByRole('option')).toHaveTextContent('Campus documentary (doc-02)');
-  // Your first project is picked to start with.
-  expect(select).toHaveValue('film-01');
-});
-
-test('projects you are not on get their own group in the dropdown', async () => {
-  api.listProjects.mockResolvedValue([
-    ...PROJECT_LIST,
-    { projectId: 'zine-03', name: 'Zine shoot', ownerUserid: 'carol', members: ['carol'] },
-  ]);
-  await signInToProjects();
-
-  const select = await within(form('Join a project')).findByRole('combobox', { name: 'Project' });
-  await waitFor(() => expect(select).toBeEnabled());
-  const groups = within(select).getAllByRole('group');
-  expect(groups.map((g) => g.getAttribute('label'))).toEqual([
-    'Your projects',
-    'Shared with you',
-    'Other projects',
-  ]);
-  expect(within(groups[2]).getByRole('option')).toHaveTextContent('Zine shoot (zine-03)');
-});
-
-test('with no projects yet, the join form says so', async () => {
-  api.listProjects.mockResolvedValue([]);
+test('the join form is a text box, not a list of projects', async () => {
   await signInToProjects();
 
   const join = form('Join a project');
-  expect(
-    await within(join).findByText('No projects yet. Start one, or ask a teammate to share theirs.')
-  ).toBeInTheDocument();
-  expect(within(join).getByRole('button', { name: 'Open project' })).toBeDisabled();
-});
-
-test('when the project list fails to load, Try again reloads it', async () => {
-  api.listProjects.mockRejectedValueOnce(new Error('down'));
-  await signInToProjects();
-
-  const join = form('Join a project');
-  expect(await within(join).findByRole('alert')).toHaveTextContent('The project list didn’t load.');
-  fireEvent.click(within(join).getByRole('button', { name: 'Try again' }));
-
-  expect(await within(join).findByRole('combobox', { name: 'Project' })).toBeInTheDocument();
+  expect(within(join).queryByRole('combobox')).not.toBeInTheDocument();
+  expect(within(join).getByLabelText('Project ID')).toHaveValue('');
+  expect(within(join).getByRole('button', { name: 'Join project' })).toBeDisabled();
+  expect(api.listProjects).not.toHaveBeenCalled();
 });
 
 test('the project ID fills in from the name until you edit it', async () => {
@@ -300,9 +257,10 @@ test('signing out returns to the landing page', async () => {
 
 // Signs in, joins film-01, and waits for its shelf to load.
 async function openFilmProject(project = PROJECT) {
+  api.joinProject.mockResolvedValue(project);
   api.getProject.mockResolvedValue(project);
   await signInToProjects();
-  await chooseProject(project.projectId);
+  joinById(project.projectId);
   const shelf = await screen.findByRole('figure', { name: 'Kits for this project' });
   await within(shelf).findByText('Camera kits');
   return shelf;
@@ -317,14 +275,15 @@ test('the project page shows what is on the shelf and what this project has', as
   const audio = kitRow(shelf, 'Audio and lighting kits');
   expect(audio).toHaveTextContent('0 with this project');
 
-  // Re-fetches the project so the tally is current, not the picker's copy.
+  // Re-fetches the project so the tally is current, not the join reply's copy.
   expect(api.getProject).toHaveBeenLastCalledWith('film-01');
 });
 
 test('the project page offers Try again when its data fails to load', async () => {
-  api.getProject.mockResolvedValueOnce(PROJECT).mockRejectedValueOnce(new Error('down'));
+  api.joinProject.mockResolvedValue(PROJECT);
+  api.getProject.mockRejectedValueOnce(new Error('down'));
   await signInToProjects();
-  await chooseProject('film-01');
+  joinById('film-01');
 
   expect(await screen.findByRole('alert')).toHaveTextContent('kit counts can’t be shown');
 
@@ -463,66 +422,14 @@ test('the project shelf has a key, counts kits with other projects, and shows li
   expect(camera).toHaveTextContent('You can check out up to 7 and check in up to 2.');
 });
 
-test('sharing a project suggests accounts and adds the one you pick', async () => {
-  api.searchUsers.mockImplementation(async (q) =>
-    [{ userid: 'bob' }, { userid: 'bobby' }, { userid: 'alice' }].filter((user) =>
-      user.userid.toLowerCase().startsWith(q.toLowerCase())
-    )
-  );
-  api.shareProject.mockResolvedValue({ ...PROJECT, members: ['alice', 'bob'] });
-  await openFilmProject();
-
-  const share = screen.getByRole('form', { name: 'Share this project' });
-  fireEvent.change(within(share).getByLabelText('User ID'), { target: { value: 'bo' } });
-
-  const bob = await within(share).findByRole('option', { name: 'bob' });
-  expect(within(share).getByRole('option', { name: 'bobby' })).toBeInTheDocument();
-  expect(within(share).queryByRole('option', { name: 'alice' })).not.toBeInTheDocument();
-
-  fireEvent.click(bob);
-  expect(within(share).getByLabelText('User ID')).toHaveValue('bob');
-  fireEvent.click(within(share).getByRole('button', { name: 'Share' }));
-
-  await waitFor(() =>
-    expect(screen.getByRole('list', { name: 'Project crew' })).toHaveTextContent('bob')
-  );
-  expect(api.shareProject).toHaveBeenCalledWith('film-01', 'bob');
-  expect(api.searchUsers).toHaveBeenCalledWith('bo');
-});
-
-test('the owner can take someone off the project', async () => {
-  api.unshareProject.mockResolvedValue({ ...PROJECT, members: ['alice'] });
+test('the crew list is read-only and tells you how to add people', async () => {
   await openFilmProject({ ...PROJECT, members: ['alice', 'bob'] });
 
-  fireEvent.click(screen.getByRole('button', { name: 'Remove bob' }));
-
-  await waitFor(() =>
-    expect(screen.getByRole('list', { name: 'Project crew' })).not.toHaveTextContent('bob')
-  );
-  expect(api.unshareProject).toHaveBeenCalledWith('film-01', 'bob');
-});
-
-test('a member who is not the owner can share but not remove people', async () => {
-  api.getProject.mockResolvedValue({ ...OTHER_PROJECT, members: ['bob', 'alice'] });
-  await signInToProjects();
-  await chooseProject('doc-02');
-
-  expect(await screen.findByRole('button', { name: 'Share' })).toBeInTheDocument();
+  expect(screen.getByRole('list', { name: 'Project crew' })).toHaveTextContent('alice (owner, you)');
+  expect(screen.getByRole('list', { name: 'Project crew' })).toHaveTextContent('bob');
+  expect(screen.getByText(/give them the project ID/)).toHaveTextContent('film-01');
+  expect(screen.queryByRole('form', { name: 'Share this project' })).not.toBeInTheDocument();
   expect(screen.queryByRole('button', { name: /Remove/ })).not.toBeInTheDocument();
-  expect(screen.getByRole('list', { name: 'Project crew' })).toHaveTextContent('bob (owner)');
-});
-
-test('sharing with an unknown user shows the server’s message', async () => {
-  api.shareProject.mockRejectedValue(new Error('No account has the user ID "nobody".'));
-  await openFilmProject();
-
-  const share = screen.getByRole('form', { name: 'Share this project' });
-  fireEvent.change(within(share).getByLabelText('User ID'), { target: { value: 'nobody' } });
-  fireEvent.click(within(share).getByRole('button', { name: 'Share' }));
-
-  expect(await within(share).findByRole('alert')).toHaveTextContent(
-    'No account has the user ID "nobody".'
-  );
 });
 
 test('signing up with a short password is caught before sending', async () => {
@@ -535,25 +442,4 @@ test('signing up with a short password is caught before sending', async () => {
 
   expect(screen.getByRole('alert')).toHaveTextContent('at least 8 characters');
   expect(api.signUp).not.toHaveBeenCalled();
-});
-
-test('there is no open-to-everyone switch, and a crew member sees no view-only note', async () => {
-  await openFilmProject();
-  expect(screen.queryByRole('checkbox', { name: 'Open to everyone' })).not.toBeInTheDocument();
-  expect(screen.queryByRole('note')).not.toBeInTheDocument();
-});
-
-test('someone off the crew can view any project but not check out or share', async () => {
-  const shelf = await openFilmProject({
-    ...PROJECT,
-    ownerUserid: 'carol',
-    members: ['carol'],
-    checkedOut: { HWSet1: 2 },
-  });
-
-  expect(screen.getByRole('note')).toHaveTextContent('Ask carol to add you to the crew');
-  expect(kitRow(shelf, 'Camera kits')).toHaveTextContent('2 with this project');
-  expect(within(shelf).queryByRole('button', { name: 'Check out' })).not.toBeInTheDocument();
-  expect(screen.queryByRole('form', { name: 'Share this project' })).not.toBeInTheDocument();
-  expect(screen.getByRole('list', { name: 'Project crew' })).toHaveTextContent('carol (owner)');
 });

@@ -59,17 +59,10 @@ export function signIn(userid, password) {
 }
 
 // GET /api/projects
-//   200 [{ projectId, name, ownerUserid, members }], every project (all
-//   projects are open to view), sorted by name
+//   200 [{ projectId, name, ownerUserid, members }], the projects you created
+//   or joined, sorted by name
 export function listProjects() {
   return request('/api/projects');
-}
-
-// GET /api/users?q=al
-//   200 [{ userid }, ...] accounts whose user ID starts with q (at most 8).
-//   A blank q returns []. Used to autofill the share field from MongoDB.
-export function searchUsers(query) {
-  return request(`/api/users?q=${encodeURIComponent(query)}`);
 }
 
 // GET /api/auth/me  ->  { userid }, or { userid: null } when signed out
@@ -90,24 +83,16 @@ export function createProject({ projectId, name, description }) {
 
 // GET /api/projects/:projectId
 //   200 project (including checkedOut, e.g. { HWSet1: 3 }, and members)
-//   |  404 if no project has that ID. Anyone signed in can view any project.
+//   |  403 if you haven't joined it  |  404 if no project has that ID
 export function getProject(projectId) {
   return request(`/api/projects/${encodeURIComponent(projectId)}`);
 }
 
-// POST /api/projects/:projectId/members  { userid }
-//   200 updated project  |  404 unknown project or user  |  409 already on it
-export function shareProject(projectId, userid) {
-  return post(`/api/projects/${encodeURIComponent(projectId)}/members`, { userid });
-}
-
-// DELETE /api/projects/:projectId/members/:userid
-//   200 updated project  |  400 if that userid is the owner
-export function unshareProject(projectId, userid) {
-  return request(
-    `/api/projects/${encodeURIComponent(projectId)}/members/${encodeURIComponent(userid)}`,
-    { method: 'DELETE' }
-  );
+// POST /api/projects/:projectId/join
+//   200 project, with you added to members  |  404 if no project has that ID.
+//   Typing a project's exact ID is all it takes to join; there are no invites.
+export function joinProject(projectId) {
+  return post(`/api/projects/${encodeURIComponent(projectId)}/join`, {});
 }
 
 // GET /api/hardware

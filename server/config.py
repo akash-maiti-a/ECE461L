@@ -30,6 +30,9 @@ class Config:
     USERS_DB_NAME = os.environ.get("USERS_DB_NAME") or "haas_users"
     PROJECTS_DB_NAME = os.environ.get("PROJECTS_DB_NAME") or "haas_projects"
     SECRET_KEY = os.environ.get("SECRET_KEY", "dev-secret-key")
+    # Encrypts user IDs in the users database (see userid_crypto.py).
+    # Changing it after accounts exist locks them out.
+    USERID_ENCRYPTION_KEY = os.environ.get("USERID_ENCRYPTION_KEY") or SECRET_KEY
     # Port 5000 is taken by AirPlay Receiver on recent macOS, so default to 5001.
     PORT = int(os.environ.get("PORT", "5001"))
     # Set USE_MOCK_DB=1 to run against an in-memory database (no MongoDB

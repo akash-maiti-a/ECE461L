@@ -9,7 +9,7 @@ const STEPS = [
   },
   {
     title: 'Open a project',
-    body: 'Start a new project or open one a teammate shared with you. Kits are checked out to projects, not people, so your whole crew sees the same gear.',
+    body: 'Start a new project, or join a teammate’s by entering its project ID. Kits are checked out to projects, not people, so your whole crew sees the same gear.',
   },
   {
     title: 'Check out kits',

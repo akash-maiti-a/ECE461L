@@ -1,20 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
-import {
-  checkIn,
-  checkOut,
-  getHardware,
-  getProject,
-  searchUsers,
-  shareProject,
-  unshareProject,
-} from '../api';
+import { checkIn, checkOut, getHardware, getProject } from '../api';
 import { ShelfUnavailable, Slots } from '../components/ShelfBoard';
 import useProjectList, { ProjectOptions } from '../useProjectList';
 
 // One project's page: who the project is, and a shelf per hardware set
 // showing what's on the shelf, what this project has, and what other
-// projects have. Every project is open to view: someone not on the crew
-// sees the same page without the check-out, check-in, and share controls.
+// projects have. Only the crew (the owner and everyone who joined with the
+// project ID) can open this page.
 function ProjectPage({ project: openedProject, userid, onBack, onSwitch }) {
   const projectId = openedProject.projectId;
   const [project, setProject] = useState(openedProject);
@@ -23,7 +15,6 @@ function ProjectPage({ project: openedProject, userid, onBack, onSwitch }) {
   const [busySetId, setBusySetId] = useState(null);
   // The latest result, shown in the row it belongs to: { setId, type, text }.
   const [message, setMessage] = useState(null);
-  const onCrew = crewOf(project).includes(userid);
 
   // Re-fetch the project too, so its checkedOut tally is current even if a
   // teammate changed it since the picker loaded it.
@@ -75,13 +66,7 @@ function ProjectPage({ project: openedProject, userid, onBack, onSwitch }) {
       </div>
       <p className="lede">{project.description}</p>
       <p className="project-owner">Created by {project.ownerUserid}</p>
-      {!onCrew && (
-        <p className="view-only-note" role="note">
-          You’re viewing this project. Ask {project.ownerUserid} to add you to the crew to
-          check kits out or in.
-        </p>
-      )}
-      <ShareProject project={project} userid={userid} canShare={onCrew} onChange={setProject} />
+      <ProjectCrew project={project} userid={userid} />
 
       <div className="project-shelf">
         {failed ? (
@@ -107,7 +92,6 @@ function ProjectPage({ project: openedProject, userid, onBack, onSwitch }) {
                   key={set.setId}
                   set={set}
                   yours={project.checkedOut?.[set.setId] ?? 0}
-                  readOnly={!onCrew}
                   busy={busySetId === set.setId}
                   message={message?.setId === set.setId ? message : null}
                   onMove={(action, quantity) => moveKits(action, set, quantity)}
@@ -123,146 +107,28 @@ function ProjectPage({ project: openedProject, userid, onBack, onSwitch }) {
   );
 }
 
-// The owner and everyone the project is shared with, owner first.
-function crewOf(project) {
-  return project.members?.length ? project.members : [project.ownerUserid];
-}
-
-// Who is on the project, and (for the crew) a field that suggests existing
-// accounts as you type (GET /api/users reads them from MongoDB).
-function ShareProject({ project, userid, canShare, onChange }) {
-  const [query, setQuery] = useState('');
-  const [matches, setMatches] = useState(null);
-  const [error, setError] = useState('');
-  const [busy, setBusy] = useState(false);
-
-  const members = crewOf(project);
-  const isOwner = userid === project.ownerUserid;
-
-  useEffect(() => {
-    const q = query.trim();
-    if (!q) {
-      setMatches(null);
-      return undefined;
-    }
-    let cancelled = false;
-    searchUsers(q)
-      .then((users) => {
-        if (!cancelled) setMatches(users);
-      })
-      .catch(() => {
-        if (!cancelled) setMatches([]);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [query]);
-
-  const suggestions = (matches || []).filter((user) => !members.includes(user.userid));
-
-  async function share(event) {
-    event.preventDefault();
-    const target = query.trim();
-    if (!target) return;
-    setError('');
-    setBusy(true);
-    try {
-      onChange(await shareProject(project.projectId, target));
-      setQuery('');
-      setMatches(null);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function remove(memberId) {
-    setError('');
-    setBusy(true);
-    try {
-      onChange(await unshareProject(project.projectId, memberId));
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
+// Who is on the project, owner first. People join by entering the
+// project ID on the projects page, so there's nothing to manage here.
+function ProjectCrew({ project, userid }) {
+  const members = project.members?.length ? project.members : [project.ownerUserid];
   return (
-    <section className="project-share" aria-labelledby="share-title">
-      <h2 id="share-title">Crew</h2>
+    <section className="project-share" aria-labelledby="crew-title">
+      <h2 id="crew-title">Crew</h2>
       <ul className="crew-list" aria-label="Project crew">
         {members.map((memberId) => {
           const notes = [];
           if (memberId === project.ownerUserid) notes.push('owner');
           if (memberId === userid) notes.push('you');
-          const label = notes.length ? `${memberId} (${notes.join(', ')})` : memberId;
           return (
             <li key={memberId}>
-              <span>{label}</span>
-              {isOwner && memberId !== project.ownerUserid && (
-                <button
-                  type="button"
-                  className="button-link"
-                  disabled={busy}
-                  onClick={() => remove(memberId)}
-                >
-                  Remove {memberId}
-                </button>
-              )}
+              {notes.length ? `${memberId} (${notes.join(', ')})` : memberId}
             </li>
           );
         })}
       </ul>
-      {canShare && (
-        <form className="form share-form" onSubmit={share} aria-label="Share this project">
-          <div className="share-row">
-            <label>
-              User ID
-              <input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                aria-describedby="share-hint"
-                aria-autocomplete="list"
-                aria-controls="user-matches"
-                autoCapitalize="off"
-                spellCheck="false"
-              />
-            </label>
-            <button type="submit" className="button-primary" disabled={busy || !query.trim()}>
-              {busy && query.trim() ? 'Sharing…' : 'Share'}
-            </button>
-          </div>
-          <p id="share-hint" className="field-hint">
-            Start typing a user ID. Suggestions are accounts already in the database.
-          </p>
-          {suggestions.length > 0 && (
-            <ul
-              className="user-matches"
-              id="user-matches"
-              role="listbox"
-              aria-label="Matching accounts"
-            >
-              {suggestions.map((user) => (
-                <li key={user.userid}>
-                  <button type="button" role="option" onClick={() => setQuery(user.userid)}>
-                    {user.userid}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-          {matches && suggestions.length === 0 && (
-            <p className="field-hint">No other account starts with that.</p>
-          )}
-          {error && (
-            <p className="form-error" role="alert">
-              {error}
-            </p>
-          )}
-        </form>
-      )}
+      <p className="field-hint">
+        To add someone, give them the project ID <strong>{project.projectId}</strong>.
+      </p>
     </section>
   );
 }
@@ -325,7 +191,7 @@ function kitCount(quantity, setName) {
   return `${quantity} ${quantity === 1 ? name.replace(/s$/, '') : name}`;
 }
 
-function ProjectShelfRow({ set, yours, readOnly, busy, message, onMove }) {
+function ProjectShelfRow({ set, yours, busy, message, onMove }) {
   const [quantity, setQuantity] = useState('');
   const [inputError, setInputError] = useState('');
   const inputId = `quantity-${set.setId}`;
@@ -368,49 +234,45 @@ function ProjectShelfRow({ set, yours, readOnly, busy, message, onMove }) {
           <strong>{others}</strong> with other projects
         </p>
       </div>
-      {!readOnly && (
-        <>
-          <form
-            className="kit-controls"
-            aria-label={`Check ${set.name.toLowerCase()} out or in`}
-            onSubmit={(event) => {
-              event.preventDefault();
-              handle('checkout');
-            }}
-          >
-            <label htmlFor={inputId}>Kits</label>
-            <input
-              id={inputId}
-              // Both rows say "Kits" visibly; the set name tells screen readers which.
-              aria-label={set.name}
-              type="number"
-              inputMode="numeric"
-              min="1"
-              step="1"
-              value={quantity}
-              onChange={(e) => setQuantity(e.target.value)}
-            />
-            <button
-              type="submit"
-              className="button-primary"
-              disabled={busy || set.available === 0}
-            >
-              Check out
-            </button>
-            <button
-              type="button"
-              className="button-quiet"
-              disabled={busy || yours === 0}
-              onClick={() => handle('checkin')}
-            >
-              Check in
-            </button>
-          </form>
-          <p className="kit-limits">
-            You can check out up to {set.available} and check in up to {yours}.
-          </p>
-        </>
-      )}
+      <form
+        className="kit-controls"
+        aria-label={`Check ${set.name.toLowerCase()} out or in`}
+        onSubmit={(event) => {
+          event.preventDefault();
+          handle('checkout');
+        }}
+      >
+        <label htmlFor={inputId}>Kits</label>
+        <input
+          id={inputId}
+          // Both rows say "Kits" visibly; the set name tells screen readers which.
+          aria-label={set.name}
+          type="number"
+          inputMode="numeric"
+          min="1"
+          step="1"
+          value={quantity}
+          onChange={(e) => setQuantity(e.target.value)}
+        />
+        <button
+          type="submit"
+          className="button-primary"
+          disabled={busy || set.available === 0}
+        >
+          Check out
+        </button>
+        <button
+          type="button"
+          className="button-quiet"
+          disabled={busy || yours === 0}
+          onClick={() => handle('checkin')}
+        >
+          Check in
+        </button>
+      </form>
+      <p className="kit-limits">
+        You can check out up to {set.available} and check in up to {yours}.
+      </p>
       {note && (
         <p
           className={note.type === 'error' ? 'form-error kit-note' : 'kit-note kit-note-success'}
