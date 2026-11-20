@@ -17,7 +17,7 @@
 | ID | Requirement | Stakeholder needs met |
 |---|---|---|
 | SR1 | The app shall provide sign-in and a New User popup where users can enter a userid and password. | SN1 |
-| SR2 | The app shall securely protect the userid and password. | SN1 |
+| SR2 | The app shall encrypt the userid and password before storing them. | SN1 |
 | SR3 | The app shall allow a user to create a project with a name, description, and project ID. | SN1 |
 | SR4 | The app shall allow a user to access an existing project. | SN1 |
 | SR5 | The app shall display the total capacity and current availability of HWSet1 (camera kits) and HWSet2 (audio and lighting kits). | SN2 |

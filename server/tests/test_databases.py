@@ -29,8 +29,8 @@ def test_signup_and_projects_write_to_different_databases(client):
     # Same cluster by default, so one connection serves both databases.
     assert users.client is projects.client
 
-    assert users["users"].find_one({"userid": "alice"})["userid"] == "alice"
-    assert projects["users"].find_one({"userid": "alice"}) is None
+    assert users["users"].count_documents({}) == 1
+    assert projects["users"].count_documents({}) == 0
     assert projects["projects"].find_one({"projectId": "film"})["projectId"] == "film"
     assert users["projects"].find_one({"projectId": "film"}) is None
     assert projects["hardware_sets"].count_documents({}) == 2

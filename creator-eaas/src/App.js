@@ -60,7 +60,7 @@ function App() {
   if (userid === undefined) {
     content = null; // still asking the server who is signed in
   } else if (userid && view === 'projects') {
-    content = <ProjectsPage userid={userid} onOpen={openProject} />;
+    content = <ProjectsPage onOpen={openProject} />;
   } else if (userid && view === 'project' && project) {
     content = (
       <ProjectPage

@@ -7,14 +7,10 @@ Each project also keeps a running tally of the kits it has out, e.g.
 {"checkedOut": {"HWSet1": 3}}. That tally is what stops a project from
 checking in more kits than it borrowed (SR8).
 
-`members` is the crew: userids who can see the project and check kits
-in and out. The owner is always first. Projects created before sharing
-have no `members` field; those are visible only to their owner until
-someone is added.
-
-Every project is open: anyone signed in sees it in their project list
-and can view its page, read-only. Only the crew can check kits in and
-out or change who is on it.
+`members` is the crew: userids who can open the project and check kits
+in and out. The owner is always first. Anyone signed in joins a project
+by typing its exact projectId; there are no invites. Projects created
+before `members` existed belong to just their owner until someone joins.
 """
 
 
@@ -90,13 +86,13 @@ class Project:
 
     @staticmethod
     def list_for(db, userid):
-        """Every project, sorted by name. All projects are open to view.
+        """The projects this user created or joined, sorted by name.
 
         Feeds the frontend's project dropdowns, so it leaves out
         descriptions and checkout tallies.
         """
         cursor = db[Project.collection_name].find(
-            {},
+            {"$or": [{"ownerUserid": userid}, {"members": userid}]},
             {"_id": 0, "projectId": 1, "name": 1, "ownerUserid": 1, "members": 1},
         )
         # str() so one odd document (say, added by hand in Atlas) can't break sorting.
@@ -106,41 +102,21 @@ class Project:
         return [Project.public(project, summary=True) for project in projects]
 
     @staticmethod
-    def add_member(db, project_id, userid):
-        """Add a userid to the crew. Returns the updated project, or None
-        if that person is already on it. The caller has already checked
-        that the project and the account both exist.
-        """
-        project = Project.get(db, project_id)
-        members = Project.member_ids(project)
-        if userid in members:
-            return None
-        members.append(userid)
-        db[Project.collection_name].update_one(
-            {"projectId": project_id}, {"$set": {"members": members}}
-        )
-        project["members"] = members
-        return Project.public(project)
+    def add_member(db, project, userid):
+        """Put userid on the project's crew and return the updated project.
 
-    @staticmethod
-    def remove_member(db, project_id, userid):
-        """Remove a userid from the crew.
-
-        Returns the updated project, or None if the owner was the target
-        (the owner always stays) or that userid was not a member.
+        Joining twice is harmless: someone already on the crew just gets
+        the project back. $addToSet means two people joining at once can't
+        overwrite each other. The owner goes in first so projects stored
+        before `members` existed keep their owner at the front.
         """
-        project = Project.get(db, project_id)
-        if userid == project.get("ownerUserid"):
-            return None
-        members = Project.member_ids(project)
-        if userid not in members:
-            return None
-        members.remove(userid)
+        owner = project.get("ownerUserid")
+        to_add = [owner, userid] if isinstance(owner, str) and owner else [userid]
         db[Project.collection_name].update_one(
-            {"projectId": project_id}, {"$set": {"members": members}}
+            {"projectId": project["projectId"]},
+            {"$addToSet": {"members": {"$each": to_add}}},
         )
-        project["members"] = members
-        return Project.public(project)
+        return Project.public(Project.get(db, project["projectId"]))
 
     @staticmethod
     def add_checked_out(db, project_id, set_id, quantity):

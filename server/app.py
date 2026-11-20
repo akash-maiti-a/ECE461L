@@ -10,12 +10,12 @@ from flask import Flask
 from flask_cors import CORS
 
 from config import Config
-from extensions import get_projects_db, init_db
+from extensions import get_projects_db, get_users_db, init_db
 from models.hardware import Hardware
+from models.user import User
 from routes.auth import auth_bp
 from routes.hardware import hardware_bp
 from routes.projects import projects_bp
-from routes.users import users_bp
 
 
 def create_app(config_class=Config):
@@ -32,11 +32,11 @@ def create_app(config_class=Config):
 
     init_db(app)
     Hardware.seed(get_projects_db())
+    User.ensure_indexes(get_users_db())
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(projects_bp)
     app.register_blueprint(hardware_bp)
-    app.register_blueprint(users_bp)
 
     @app.route("/api/health")
     def health():

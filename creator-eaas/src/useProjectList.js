@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { listProjects } from './api';
 
-// Loads every project for the project dropdowns. projects is null while
+// Loads the projects you created or joined, for the project switcher. projects is null while
 // loading; failed is true if the request didn't work, and reload tries again.
 function useProjectList() {
   const [projects, setProjects] = useState(null);
@@ -23,9 +23,7 @@ function useProjectList() {
 }
 
 // The dropdown's options, the signed-in user's projects first:
-// "Spring short film (film-01)", then ones shared with them (members
-// includes the signed-in user), then everyone else's. Every project is open
-// to view.
+// "Spring short film (film-01)", then ones they joined.
 export function ProjectOptions({ projects, userid }) {
   const option = (p) => (
     <option key={p.projectId} value={p.projectId}>
@@ -33,21 +31,14 @@ export function ProjectOptions({ projects, userid }) {
     </option>
   );
   const yours = projects.filter((p) => p.ownerUserid === userid);
-  const shared = projects.filter(
-    (p) => p.ownerUserid !== userid && (p.members || []).includes(userid)
-  );
-  const others = projects.filter(
-    (p) => p.ownerUserid !== userid && !(p.members || []).includes(userid)
-  );
-  const groups = [
-    ['Your projects', yours],
-    ['Shared with you', shared],
-    ['Other projects', others],
-  ].filter(([, list]) => list.length > 0);
-  if (groups.length <= 1) {
+  const joined = projects.filter((p) => p.ownerUserid !== userid);
+  if (yours.length === 0 || joined.length === 0) {
     return projects.map(option);
   }
-  return groups.map(([label, list]) => (
+  return [
+    ['Your projects', yours],
+    ['Joined', joined],
+  ].map(([label, list]) => (
     <optgroup key={label} label={label}>
       {list.map(option)}
     </optgroup>
