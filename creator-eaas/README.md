@@ -56,11 +56,12 @@ The tests don't need the API running:
 
 ## Deploying
 
-Build with the backend's public URL so the page knows where to send requests:
+The cloud deployment doesn't host this page separately. The `Dockerfile`
+at the repo root runs `npm run build`, and Flask serves the `build/` folder
+next to the API, so `REACT_APP_API_URL` stays unset and every request goes
+to the same URL. See "Deploying" in the top-level README.
 
-```bash
-REACT_APP_API_URL=https://your-api.example.com npm run build
-```
-
-The `build/` folder can then be served by any static host, such as Vercel or
-Netlify.
+To host the page on its own static host instead, build with the API's URL
+(`REACT_APP_API_URL=https://your-api.example.com npm run build`). The
+sign-in cookie then crosses sites, which needs extra server settings
+(issue #37).

@@ -35,6 +35,9 @@ python app.py
 ```
 
 The API starts at `http://localhost:5001`. Try `GET /api/health`.
+If `creator-eaas/build` exists (`npm run build`), Flask also serves the
+React page at `http://localhost:5001/`, the same way the cloud deployment
+does. See "Deploying" in the top-level README.
 It uses 5001 because macOS reserves port 5000 for AirPlay Receiver. Set
 `PORT` in `.env` to change it.
 
@@ -51,7 +54,7 @@ database.
 
 | Folder or file | Job |
 |---|---|
-| `app.py` | Builds the Flask app: config, database connection, seeding, routes. |
+| `app.py` | Builds the Flask app: config, database connection, seeding, routes, and serving the React build. |
 | `config.py` | Reads settings from environment variables and `.env`. |
 | `extensions.py` | Holds the users database connection and the projects database connection. |
 | `userid_crypto.py` | Encrypts user IDs before they are stored. Set `USERID_ENCRYPTION_KEY` once per deployment and never change it. |
@@ -106,6 +109,15 @@ Sign-up needs a password of at least 8 characters.
 - A check-in can't return more kits than that project has out, so
   availability never goes above capacity.
 - Quantities must be whole numbers greater than 0.
+
+## Production
+
+The `Dockerfile` at the repo root runs this app with gunicorn
+(`gunicorn --chdir server "app:create_app()"`) and serves the React build
+from the same server. Set `MONGO_URI`, `SECRET_KEY`, and
+`USERID_ENCRYPTION_KEY`; the image sets `SESSION_COOKIE_SECURE=1`. Any path
+that isn't an API route returns the React page, and an unknown `/api/...`
+path returns `404 {"error": "Not found."}`.
 
 ## Known limitations
 

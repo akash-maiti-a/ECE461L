@@ -1,0 +1,15 @@
+# Render Blueprint: New > Blueprint, pick this repo, then paste the Atlas
+# connection string into MONGO_URI when Render asks for it.
+services:
+  - type: web
+    name: creator-eaas
+    runtime: docker
+    plan: free
+    healthCheckPath: /api/health
+    envVars:
+      - key: MONGO_URI
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: USERID_ENCRYPTION_KEY
+        generateValue: true
