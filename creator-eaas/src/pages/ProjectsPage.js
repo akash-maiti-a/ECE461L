@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { createProject, joinProject } from '../api';
+import useProjectList from '../useProjectList';
 
-// Figure 2, bottom half: start a new project or join an existing one.
-// The two forms are alternatives, so they sit side by side split by a rule.
-function ProjectsPage({ onOpen }) {
+// Figure 2, bottom half: reopen one of your projects, start a new one, or
+// join an existing one. The two forms are alternatives, so they sit side by
+// side split by a rule.
+function ProjectsPage({ userid, onOpen, onOpenById }) {
   return (
     <section className="page-section">
       <h1 className="page-title">Open a project</h1>
@@ -11,10 +13,83 @@ function ProjectsPage({ onOpen }) {
         Kits are checked out to projects, not people. Start one for your crew, or join one
         by entering its project ID.
       </p>
+      <YourProjects userid={userid} onOpenById={onOpenById} />
       <div className="picker">
         <CreateProjectForm onCreated={onOpen} />
         <JoinProjectForm onJoined={onOpen} />
       </div>
+    </section>
+  );
+}
+
+// The projects you started or joined, so coming back after signing in is one
+// click instead of retyping an ID. Hidden until it loads, and when you have
+// none yet: then the two forms below are the place to start.
+function YourProjects({ userid, onOpenById }) {
+  const { projects, failed, reload } = useProjectList();
+  const [openingId, setOpeningId] = useState(null);
+  const [error, setError] = useState('');
+
+  if (failed) {
+    return (
+      <div className="your-projects">
+        <p className="field-hint">
+          Your projects didn’t load.{' '}
+          <button type="button" className="button-link" onClick={reload}>
+            Try again
+          </button>
+        </p>
+      </div>
+    );
+  }
+  if (!projects || projects.length === 0) {
+    return null;
+  }
+
+  async function open(projectId) {
+    setOpeningId(projectId);
+    setError('');
+    try {
+      await onOpenById(projectId);
+    } catch (err) {
+      setError(err.message);
+      setOpeningId(null);
+    }
+  }
+
+  return (
+    <section className="your-projects" aria-labelledby="your-projects-title">
+      <h2 id="your-projects-title">Your projects</h2>
+      <ul className="project-list">
+        {projects.map((p) => (
+          <li key={p.projectId}>
+            <div className="project-list-name">
+              <strong>{p.name}</strong>
+              <span className="tape tape-note tape-id" aria-label={`Project ID ${p.projectId}`}>
+                {p.projectId}
+              </span>
+            </div>
+            <p className="project-list-meta">
+              {p.ownerUserid === userid ? 'Started by you' : `Joined, started by ${p.ownerUserid}`}
+              {p.members.length > 1 && `. ${p.members.length} on the crew`}
+            </p>
+            <button
+              type="button"
+              className="button-quiet"
+              onClick={() => open(p.projectId)}
+              disabled={openingId !== null}
+              aria-label={`Open ${p.name}`}
+            >
+              {openingId === p.projectId ? 'Opening…' : 'Open'}
+            </button>
+          </li>
+        ))}
+      </ul>
+      {error && (
+        <p className="form-error" role="alert">
+          {error}
+        </p>
+      )}
     </section>
   );
 }

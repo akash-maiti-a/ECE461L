@@ -432,6 +432,55 @@ main {
   margin-top: 16px;
 }
 
+/* Your projects: a ruled list, like the kit contents, not a grid of cards.
+   Each row is name and ID, who started it, then Open. */
+.your-projects {
+  margin-top: 40px;
+  max-width: 960px;
+}
+
+.your-projects h2 {
+  font-size: 1.6rem;
+  font-weight: 800;
+}
+
+.project-list {
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+  border-top: 2px solid var(--ink);
+}
+
+.project-list li {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px 24px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.project-list-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+  font-size: 1.1rem;
+}
+
+.project-list-name .tape {
+  font-size: 0.9rem;
+}
+
+.project-list-meta {
+  color: var(--steel);
+  font-size: 0.95rem;
+}
+
+.your-projects .form-error {
+  margin-top: 12px;
+}
+
 /* Two alternative forms, split by a rule rather than boxed as cards. */
 .picker {
   display: grid;
@@ -749,6 +798,21 @@ main {
 }
 
 @media (max-width: 720px) {
+  /* Name and ID on top, who started it below, Open on the right. */
+  .project-list li {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .project-list-meta {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .project-list li > button {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+  }
+
   .picker {
     grid-template-columns: minmax(0, 1fr);
     gap: 40px;
