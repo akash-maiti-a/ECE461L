@@ -11,6 +11,44 @@ The app has two parts, each with its own README:
 - [`server/`](server/README.md): the Flask API and MongoDB data. Run it first, on port 5001.
 - [`creator-eaas/`](creator-eaas/README.md): the React page. `npm start` serves it on port 3000 and forwards `/api` requests to the server.
 
+## Deploying
+
+The app deploys as **one service**: the `Dockerfile` builds the React page,
+and Flask serves it next to the API at one URL. Keeping one URL means the
+sign-in cookie always reaches the API (#37). Deploying needs a free MongoDB
+Atlas cluster for the data and a free Render web service to run the app.
+
+**1. MongoDB Atlas (the database)**
+
+1. Create a free (M0) cluster.
+2. Under **Database Access**, add a database user with a password.
+3. Under **Network Access**, allow access from anywhere (`0.0.0.0/0`). Render's
+   free plan has no fixed IP address to allow instead.
+4. Under **Connect > Drivers**, copy the connection string
+   (`mongodb+srv://...`) and put the user's password into it. Keep it private:
+   it's the database password.
+
+**2. Render (runs the app)**
+
+1. Sign in to render.com with GitHub. Render needs access to this repository,
+   which its owner grants.
+2. Choose **New > Blueprint** and pick this repository. Render reads
+   `render.yaml`.
+3. When asked for `MONGO_URI`, paste the Atlas connection string. Render
+   generates `SECRET_KEY` and `USERID_ENCRYPTION_KEY` itself. Never change
+   them once accounts exist, or those accounts can't sign in.
+4. When the deploy finishes, open the service's URL and check that
+   `/api/health` returns `"status": "ok"`.
+
+The free plan sleeps when nobody has used it for a while, so the first visit
+afterward can take about a minute. Open the app before a demo or before
+handing the URL to the TAs.
+
+**3. After the first deploy**
+
+Put the URL at the top of this README, run through the TA test cases on it,
+then close #19 and #37.
+
 ## Project Plan
 
 ### Team Members
