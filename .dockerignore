@@ -1,0 +1,12 @@
+# Keep the Docker build small and keep local secrets out of the image.
+.git
+.claude
+**/node_modules
+**/build
+**/.venv
+**/__pycache__
+**/.pytest_cache
+**/.env
+pics
+docs
+*.pdf

@@ -56,11 +56,7 @@ The tests don't need the API running:
 
 ## Deploying
 
-Build with the backend's public URL so the page knows where to send requests:
-
-```bash
-REACT_APP_API_URL=https://your-api.example.com npm run build
-```
-
-The `build/` folder can then be served by any static host, such as Vercel or
-Netlify.
+The deployed app is one service: Flask serves this page's production build
+next to the API, so both share one URL and `REACT_APP_API_URL` stays unset.
+The repo's `Dockerfile` runs `npm run build` itself. See "Deploying" in the
+top-level README for the steps.

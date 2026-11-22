@@ -1,0 +1,29 @@
+# Render Blueprint (render.com > New > Blueprint > pick this repo).
+# One web service built from the Dockerfile: the React page and the API on
+# one URL. Render asks for MONGO_URI when the Blueprint is created; paste
+# the MongoDB Atlas connection string there.
+services:
+  - type: web
+    name: creator-eaas
+    runtime: docker
+    plan: free
+    # Same AWS region as the team's Atlas cluster (us-east-1), so the app and
+    # its database are close together.
+    region: virginia
+    healthCheckPath: /api/health
+    envVars:
+      - key: MONGO_URI
+        sync: false
+      # The live app gets its own databases, separate from the haas_* ones
+      # teammates use for local testing on the same cluster, so the TAs start
+      # from a clean shelf and test accounts never mix with real ones.
+      - key: USERS_DB_NAME
+        value: prod_users
+      - key: PROJECTS_DB_NAME
+        value: prod_projects
+      # Generated once by Render and kept across deploys. Never change them
+      # after accounts exist: they sign sessions and encrypt user IDs.
+      - key: SECRET_KEY
+        generateValue: true
+      - key: USERID_ENCRYPTION_KEY
+        generateValue: true
