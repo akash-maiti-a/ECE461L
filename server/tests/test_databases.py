@@ -34,11 +34,13 @@ def test_signup_and_projects_write_to_different_databases(client):
     assert projects["users"].count_documents({}) == 0
     assert projects["projects"].find_one({"projectId": "film"})["projectId"] == "film"
     assert users["projects"].find_one({"projectId": "film"}) is None
-    assert projects["hardware_sets"].count_documents({}) == 2
+    hardware = extensions.get_hardware_db()
+    assert hardware["hardware_sets"].count_documents({}) == 2
+    assert projects["hardware_sets"].count_documents({}) == 0
     assert users["hardware_sets"].count_documents({}) == 0
 
 
-def test_checkout_history_stays_with_projects(client, make_project):
+def test_checkout_history_goes_to_the_hardware_database(client, make_project):
     project_id = make_project()
     response = client.post(
         "/api/hardware/checkout",
@@ -46,10 +48,12 @@ def test_checkout_history_stays_with_projects(client, make_project):
     )
     assert response.status_code == 200
 
-    users = extensions.get_users_db()
+    hardware = extensions.get_hardware_db()
     projects = extensions.get_projects_db()
-    assert projects["checkout_records"].count_documents({"projectId": project_id}) == 1
-    assert users["checkout_records"].count_documents({}) == 0
+    assert hardware["checkout_records"].count_documents({"projectId": project_id}) == 1
+    assert projects["checkout_records"].count_documents({}) == 0
+    # The project's own tally stays with the project.
+    assert projects["projects"].find_one({"projectId": project_id})["checkedOut"] == {"HWSet1": 1}
 
 
 def test_different_uris_open_two_connections(monkeypatch):
