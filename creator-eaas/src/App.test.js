@@ -230,7 +230,9 @@ test('the join form is a text box, not a list of projects', async () => {
   expect(within(join).queryByRole('combobox')).not.toBeInTheDocument();
   expect(within(join).getByLabelText('Project ID')).toHaveValue('');
   expect(within(join).getByRole('button', { name: 'Join project' })).toBeDisabled();
-  expect(api.listProjects).not.toHaveBeenCalled();
+  // Your own projects are listed separately (see "Your projects" below), never
+  // as choices inside the join form.
+  expect(within(join).queryByText('Spring short film')).not.toBeInTheDocument();
 });
 
 test('the project ID fills in from the name until you edit it', async () => {
@@ -442,4 +444,41 @@ test('signing up with a short password is caught before sending', async () => {
 
   expect(screen.getByRole('alert')).toHaveTextContent('at least 8 characters');
   expect(api.signUp).not.toHaveBeenCalled();
+});
+
+test('the picker lists your projects so you can reopen one after signing in', async () => {
+  api.getProject.mockResolvedValue(PROJECT);
+  await signInToProjects();
+
+  const yours = await screen.findByRole('region', { name: 'Your projects' });
+  const rows = within(yours).getAllByRole('listitem');
+  expect(rows).toHaveLength(2);
+  expect(rows[0]).toHaveTextContent('Campus documentary');
+  expect(rows[0]).toHaveTextContent('Joined, started by bob. 2 on the crew');
+  expect(rows[1]).toHaveTextContent('Spring short film');
+  expect(rows[1]).toHaveTextContent('Started by you');
+
+  fireEvent.click(within(yours).getByRole('button', { name: 'Open Spring short film' }));
+
+  expect(await screen.findByRole('heading', { name: 'Spring short film', level: 1 })).toBeInTheDocument();
+  expect(api.getProject).toHaveBeenCalledWith('film-01');
+  expect(api.joinProject).not.toHaveBeenCalled();
+});
+
+test('the picker hides Your projects when you have none yet', async () => {
+  api.listProjects.mockResolvedValue([]);
+  await signInToProjects();
+
+  await screen.findByRole('form', { name: 'Start a new project' });
+  expect(screen.queryByRole('region', { name: 'Your projects' })).not.toBeInTheDocument();
+});
+
+test('if Your projects fails to load, Try again reloads it', async () => {
+  api.listProjects.mockRejectedValueOnce(new Error('down'));
+  await signInToProjects();
+
+  fireEvent.click(await screen.findByRole('button', { name: 'Try again' }));
+
+  expect(await screen.findByRole('region', { name: 'Your projects' })).toBeInTheDocument();
+  expect(api.listProjects).toHaveBeenCalledTimes(2);
 });

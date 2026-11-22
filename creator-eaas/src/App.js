@@ -46,7 +46,8 @@ function App() {
     setView('project');
   }
 
-  // From the project page's dropdown. Errors go back to the dropdown to show.
+  // From the project page's dropdown or the picker's project list. Errors go
+  // back to the caller to show.
   async function switchProject(projectId) {
     openProject(await getProject(projectId));
   }
@@ -60,7 +61,7 @@ function App() {
   if (userid === undefined) {
     content = null; // still asking the server who is signed in
   } else if (userid && view === 'projects') {
-    content = <ProjectsPage onOpen={openProject} />;
+    content = <ProjectsPage userid={userid} onOpen={openProject} onOpenById={switchProject} />;
   } else if (userid && view === 'project' && project) {
     content = (
       <ProjectPage
