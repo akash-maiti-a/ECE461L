@@ -49,6 +49,7 @@ def create_app(config_class=Config):
             "status": "ok",
             "usersDb": app.config["USERS_DB_NAME"],
             "projectsDb": app.config["PROJECTS_DB_NAME"],
+            "hardwareDb": app.config["HARDWARE_DB_NAME"],
         }, 200
 
     _serve_frontend(app)
