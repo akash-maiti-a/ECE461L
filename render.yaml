@@ -1,0 +1,19 @@
+# Render Blueprint (render.com > New > Blueprint > pick this repo).
+# One web service built from the Dockerfile: the React page and the API on
+# one URL. Render asks for MONGO_URI when the Blueprint is created; paste
+# the MongoDB Atlas connection string there.
+services:
+  - type: web
+    name: creator-eaas
+    runtime: docker
+    plan: free
+    healthCheckPath: /api/health
+    envVars:
+      - key: MONGO_URI
+        sync: false
+      # Generated once by Render and kept across deploys. Never change them
+      # after accounts exist: they sign sessions and encrypt user IDs.
+      - key: SECRET_KEY
+        generateValue: true
+      - key: USERID_ENCRYPTION_KEY
+        generateValue: true
