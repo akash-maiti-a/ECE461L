@@ -74,3 +74,19 @@ def test_without_a_build_only_the_api_runs(monkeypatch, tmp_path):
 
     assert browser.get("/").status_code == 404
     assert browser.get("/api/health").status_code == 200
+
+
+def test_sign_in_cookie_is_https_only_when_configured(monkeypatch):
+    monkeypatch.setattr(extensions, "MongoClient", mongomock.MongoClient)
+    monkeypatch.setattr(Config, "MONGO_URI", "mongodb://localhost:27017/haas_db")
+    monkeypatch.setattr(Config, "USERS_MONGO_URI", None)
+    monkeypatch.setattr(Config, "PROJECTS_MONGO_URI", None)
+    monkeypatch.setattr(Config, "SESSION_COOKIE_SECURE", True)
+    browser = create_app().test_client()
+
+    response = browser.post("/api/auth/signup", json={"userid": "sam", "password": "sam-pass1"})
+
+    cookie = response.headers["Set-Cookie"]
+    assert "Secure" in cookie
+    assert "HttpOnly" in cookie
+    assert "SameSite=Lax" in cookie

@@ -45,6 +45,10 @@ class Config:
     # Sign-in cookie lasts a week and isn't sent on requests from other sites.
     PERMANENT_SESSION_LIFETIME = timedelta(days=7)
     SESSION_COOKIE_SAMESITE = "Lax"
+    # Set SESSION_COOKIE_SECURE=1 when the app is served over HTTPS (any cloud
+    # host) so the sign-in cookie is never sent over plain HTTP. Left off for
+    # local development, which runs on plain http://localhost.
+    SESSION_COOKIE_SECURE = os.environ.get("SESSION_COOKIE_SECURE") == "1"
     # Flask serves the React build from here, so the page and the API share
     # one URL. If the folder has no index.html (say, before `npm run build`),
     # only the API is served.
