@@ -36,7 +36,9 @@ Atlas cluster for the data and a free Render web service to run the app.
    `render.yaml`.
 3. When asked for `MONGO_URI`, paste the Atlas connection string. Render
    generates `SECRET_KEY` and `USERID_ENCRYPTION_KEY` itself. Never change
-   them once accounts exist, or those accounts can't sign in.
+   them once accounts exist, or those accounts can't sign in. The live app
+   stores its data in `prod_users` and `prod_projects`, separate from the
+   `haas_*` databases used for local testing on the same cluster.
 4. When the deploy finishes, open the service's URL and check that
    `/api/health` returns `"status": "ok"`.
 
