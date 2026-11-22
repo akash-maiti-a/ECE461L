@@ -6,8 +6,11 @@ or USE_MOCK_DB=1 for an in-memory database). Accounts and projects are
 stored in separate databases.
 """
 
-from flask import Flask
+import os
+
+from flask import Flask, jsonify, send_from_directory
 from flask_cors import CORS
+from werkzeug.security import safe_join
 
 from config import Config
 from extensions import get_projects_db, get_users_db, init_db
@@ -23,7 +26,9 @@ def create_app(config_class=Config):
     at module scope) is what lets tests create a fresh app wired to a
     fake database, instead of always hitting a real Mongo instance.
     """
-    app = Flask(__name__)
+    # No Flask static folder: its /static route would hide the React build's
+    # /static/js and /static/css files.
+    app = Flask(__name__, static_folder=None)
     app.config.from_object(config_class)
 
     # Allow the React dev server (and the deployed frontend) to call this
@@ -46,7 +51,38 @@ def create_app(config_class=Config):
             "projectsDb": app.config["PROJECTS_DB_NAME"],
         }, 200
 
+    _serve_frontend(app)
     return app
+
+
+def _serve_frontend(app):
+    """Serve the React build at every path the API doesn't use (R2-3).
+
+    Serving the page and the API from one server gives the TAs one URL, and
+    keeps the sign-in cookie same-site so browsers always send it (#37).
+
+    - A path that is a file in the build (like /static/js/main.js) gets that
+      file. safe_join refuses paths that would climb out of the build folder.
+    - Any other path gets index.html, so refreshing on any page still loads
+      the app.
+    - Unknown /api paths get a JSON 404, since the frontend expects JSON.
+    - Without a build (local development, where npm start serves the page),
+      everything here is a JSON 404 and only the API runs.
+    """
+
+    @app.route("/", defaults={"path": ""})
+    @app.route("/<path:path>")
+    def frontend(path):
+        not_found = jsonify({"error": "Not found."}), 404
+        if path == "api" or path.startswith("api/"):
+            return not_found
+        build_dir = app.config.get("FRONTEND_BUILD_DIR")
+        if not build_dir or not os.path.isfile(os.path.join(build_dir, "index.html")):
+            return not_found
+        file_path = safe_join(build_dir, path) if path else None
+        if file_path and os.path.isfile(file_path):
+            return send_from_directory(build_dir, path)
+        return send_from_directory(build_dir, "index.html")
 
 
 if __name__ == "__main__":

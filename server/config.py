@@ -1,10 +1,14 @@
 import os
 from datetime import timedelta
+from pathlib import Path
 
 from dotenv import load_dotenv
 
 # Pull settings from server/.env if present (see .env.example).
 load_dotenv()
+
+# Where `npm run build` puts the React app, relative to this repo.
+_DEFAULT_FRONTEND_BUILD = Path(__file__).resolve().parent.parent / "creator-eaas" / "build"
 
 
 class Config:
@@ -41,3 +45,7 @@ class Config:
     # Sign-in cookie lasts a week and isn't sent on requests from other sites.
     PERMANENT_SESSION_LIFETIME = timedelta(days=7)
     SESSION_COOKIE_SAMESITE = "Lax"
+    # Flask serves the React build from here, so the page and the API share
+    # one URL. If the folder has no index.html (say, before `npm run build`),
+    # only the API is served.
+    FRONTEND_BUILD_DIR = os.environ.get("FRONTEND_BUILD_DIR") or str(_DEFAULT_FRONTEND_BUILD)
