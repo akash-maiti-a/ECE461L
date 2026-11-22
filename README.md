@@ -50,22 +50,36 @@ We will first build the required features for two hardware sets: HWSet1 (camera 
 
 ## Product Features
 
-
+| Feature | What a user can do | Stakeholder needs |
+|---|---|---|
+| Accounts | Create an account in the New User pop-up, sign in, and sign out. Sign-in lasts 7 days through a signed session cookie. | SN1 |
+| Credential protection | Passwords are stored only as salted hashes. User IDs are stored as a keyed hash (for lookups) plus an encrypted copy, never as typed. | SN1 |
+| Projects | Start a project with a name, description, and project ID; IDs must be unique. Reopen your projects from the list on the project page. | SN1 |
+| Joining by ID | Join someone else's project by typing its exact project ID. Only members can open a project or move its kits. | SN1 |
+| Shelf view | See each hardware set's capacity and how many kits are on the shelf, with this project, and with other projects. | SN2 |
+| Check out | Request a number of kits for a project. The request is refused if that many aren't on the shelf. | SN3, SN4 |
+| Check in | Return kits for a project. A project can't return more than it has out, so availability never passes capacity. | SN5 |
+| More hardware sets | Hardware sets are read from the database, so adding an HWSet3 means adding one entry to `server/models/hardware.py`. | SN6 |
 
 ### User Stories
 
-User Stories can be found in the Issues tab under this repository
-
+User stories are tracked in this repository's Issues tab (#5 through #18).
 
 ### Technical Debt
 
-
-
+- **Two-step checkouts.** A checkout or check-in updates the hardware set and the project in separate database writes. A crash between them could leave the counts out of step. MongoDB transactions would fix this; they need a replica set, which MongoDB Atlas provides.
+- **No way to leave or remove members.** Anyone with a project's ID can join it, and nobody can be removed afterward.
+- **The encryption key can't change.** `USERID_ENCRYPTION_KEY` (or `SECRET_KEY`) must stay the same for the life of a deployment, or every existing account is locked out. There's no key rotation.
+- **No sign-in rate limiting.** Repeated wrong passwords aren't slowed down or blocked.
+- **Placeholder kit contents.** The gear lists in `server/models/hardware.py` are examples, not our real inventory.
+- **Extra requests on the project page.** After each checkout or check-in, the page re-fetches the whole project to update its count instead of using the server's reply.
 
 ### Research Items
 
-
-
+- **Hosting (open, #19 and #37).** The sign-in cookie is `SameSite=Lax`, so the browser won't send it if the React page and the API are on different domains. The page and API either need to be served from one origin, or the cookie needs `SameSite=None` and `Secure` with CORS limited to the page's domain.
+- **Database (MongoDB Atlas).** The free tier is enough for the PoC. Accounts and projects can live in separate databases (`USERS_MONGO_URI`, `PROJECTS_MONGO_URI`).
+- **Encrypting user IDs.** Settled in #35: a keyed HMAC-SHA256 for lookups plus Fernet (AES) ciphertext, so the stored record never contains the plain user ID.
+- **Preventing double checkouts.** Settled: the "enough on the shelf?" check and the decrement are one conditional MongoDB update, so two requests can't both take the last kit.
 
 ## High Level Sketch
 ![Sketch](pics/sketch.png)
