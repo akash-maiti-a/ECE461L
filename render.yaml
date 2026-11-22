@@ -21,6 +21,8 @@ services:
         value: prod_users
       - key: PROJECTS_DB_NAME
         value: prod_projects
+      - key: HARDWARE_DB_NAME
+        value: prod_hardware
       # Generated once by Render and kept across deploys. Never change them
       # after accounts exist: they sign sessions and encrypt user IDs.
       - key: SECRET_KEY

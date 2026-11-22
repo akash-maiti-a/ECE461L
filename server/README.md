@@ -26,9 +26,10 @@ USE_MOCK_DB=1 python app.py
 ```
 
 Against a real MongoDB, local or a free MongoDB Atlas cluster, set
-`MONGO_URI` in `.env` and run. Accounts are stored in `haas_users` and
-projects in `haas_projects`. Set `USERS_MONGO_URI` and `PROJECTS_MONGO_URI`
-to put those databases on different clusters:
+`MONGO_URI` in `.env` and run. Accounts are stored in `haas_users`,
+projects in `haas_projects`, and hardware in `haas_hardware`. Set
+`USERS_MONGO_URI`, `PROJECTS_MONGO_URI`, or `HARDWARE_MONGO_URI` to put a
+database on its own cluster:
 
 ```bash
 python app.py
@@ -53,7 +54,8 @@ database.
 |---|---|
 | `app.py` | Builds the Flask app: config, database connection, seeding, routes. |
 | `config.py` | Reads settings from environment variables and `.env`. |
-| `extensions.py` | Holds the users database connection and the projects database connection. |
+| `extensions.py` | Holds the connections to the users, projects, and hardware databases. |
+| `hardware_migration.py` | On startup, copies hardware sets and checkout history that are still in the projects database into the hardware database. Safe to run every time; remove once every deployment has moved. |
 | `userid_crypto.py` | Encrypts user IDs before they are stored. Set `USERID_ENCRYPTION_KEY` once per deployment and never change it. |
 | `models/` | One class per collection. The only code that queries MongoDB. |
 | `routes/` | One Flask blueprint per group of endpoints. Validates input, calls models, returns JSON. |
@@ -61,14 +63,14 @@ database.
 
 ## Data
 
-Accounts and projects are separate databases. With one `MONGO_URI` they share a cluster and use different database names. With `USERS_MONGO_URI` and `PROJECTS_MONGO_URI` they are different clusters. The database name inside a URI is ignored.
+Accounts, projects, and hardware are three separate databases. With one `MONGO_URI` they share a cluster and use different database names. With `USERS_MONGO_URI`, `PROJECTS_MONGO_URI`, or `HARDWARE_MONGO_URI` a database moves to its own cluster. The database name inside a URI is ignored.
 
 | Database | Collection | One document holds |
 |---|---|---|
 | `haas_users` | `users` | `userid_hash` (keyed HMAC, for lookups), `userid_encrypted` (Fernet ciphertext) and `password_hash`. Neither the user ID nor the password is stored as typed; see `userid_crypto.py` |
 | `haas_projects` | `projects` | `projectId`, `name`, `description`, `ownerUserid`, `members` (userids who can use it, owner first), and `checkedOut`: kits out per set, like `{"HWSet1": 3}` |
-| `haas_projects` | `hardware_sets` | `setId`, `name`, `capacity`, `available`, `contents` |
-| `haas_projects` | `checkout_records` | History: `projectId`, `setId`, `quantity`, `action` (`checkout` or `checkin`), `at` |
+| `haas_hardware` | `hardware_sets` | `setId`, `name`, `capacity`, `available`, `contents` |
+| `haas_hardware` | `checkout_records` | History: `projectId`, `setId`, `quantity`, `action` (`checkout` or `checkin`), `at` |
 
 Documents already stored in the old `haas_db` database are not copied over.
 
@@ -85,7 +87,7 @@ Sign-up needs a password of at least 8 characters.
 
 | Method | Path | Body | Success | Errors |
 |---|---|---|---|---|
-| GET | `/api/health` | | `200 {status, usersDb, projectsDb}` | |
+| GET | `/api/health` | | `200 {status, usersDb, projectsDb, hardwareDb}` | |
 | POST | `/api/auth/signup` | `{userid, password}` | `201 {userid}` | 400 missing field, 409 user ID taken |
 | POST | `/api/auth/signin` | `{userid, password}` | `200 {userid}` | 400 missing field, 401 wrong user ID or password |
 | GET | `/api/auth/me` | | `200 {userid}` (`null` if signed out) | |

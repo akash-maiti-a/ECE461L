@@ -39,8 +39,9 @@ Atlas cluster for the data and a free Render web service to run the app.
 3. When asked for `MONGO_URI`, paste the Atlas connection string. Render
    generates `SECRET_KEY` and `USERID_ENCRYPTION_KEY` itself. Never change
    them once accounts exist, or those accounts can't sign in. The live app
-   stores its data in `prod_users` and `prod_projects`, separate from the
-   `haas_*` databases used for local testing on the same cluster.
+   stores its data in three databases, `prod_users`, `prod_projects`, and
+   `prod_hardware`, separate from the `haas_*` databases used for local
+   testing on the same cluster.
 4. When the deploy finishes, open the service's URL and check that
    `/api/health` returns `"status": "ok"`.
 
@@ -119,7 +120,7 @@ User stories are tracked in this repository's Issues tab (#5 through #18).
 ### Research Items
 
 - **Hosting (open, #19 and #37).** The sign-in cookie is `SameSite=Lax`, so the browser won't send it if the React page and the API are on different domains. The page and API either need to be served from one origin, or the cookie needs `SameSite=None` and `Secure` with CORS limited to the page's domain.
-- **Database (MongoDB Atlas).** The free tier is enough for the PoC. Accounts and projects can live in separate databases (`USERS_MONGO_URI`, `PROJECTS_MONGO_URI`).
+- **Database (MongoDB Atlas).** The free tier is enough for the PoC. Accounts, projects, and hardware are three separate databases, each of which can move to its own cluster (`USERS_MONGO_URI`, `PROJECTS_MONGO_URI`, `HARDWARE_MONGO_URI`).
 - **Encrypting user IDs.** Settled in #35: a keyed HMAC-SHA256 for lookups plus Fernet (AES) ciphertext, so the stored record never contains the plain user ID.
 - **Preventing double checkouts.** Settled: the "enough on the shelf?" check and the decrement are one conditional MongoDB update, so two requests can't both take the last kit.
 
