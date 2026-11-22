@@ -24,6 +24,7 @@ def site(monkeypatch, build_dir):
     monkeypatch.setattr(Config, "MONGO_URI", "mongodb://localhost:27017/haas_db")
     monkeypatch.setattr(Config, "USERS_MONGO_URI", None)
     monkeypatch.setattr(Config, "PROJECTS_MONGO_URI", None)
+    monkeypatch.setattr(Config, "HARDWARE_MONGO_URI", None)
     monkeypatch.setattr(Config, "FRONTEND_BUILD_DIR", str(build_dir))
     return create_app().test_client()
 
@@ -69,6 +70,7 @@ def test_without_a_build_only_the_api_runs(monkeypatch, tmp_path):
     monkeypatch.setattr(Config, "MONGO_URI", "mongodb://localhost:27017/haas_db")
     monkeypatch.setattr(Config, "USERS_MONGO_URI", None)
     monkeypatch.setattr(Config, "PROJECTS_MONGO_URI", None)
+    monkeypatch.setattr(Config, "HARDWARE_MONGO_URI", None)
     monkeypatch.setattr(Config, "FRONTEND_BUILD_DIR", str(tmp_path / "missing"))
     browser = create_app().test_client()
 
@@ -81,6 +83,7 @@ def test_sign_in_cookie_is_https_only_when_configured(monkeypatch):
     monkeypatch.setattr(Config, "MONGO_URI", "mongodb://localhost:27017/haas_db")
     monkeypatch.setattr(Config, "USERS_MONGO_URI", None)
     monkeypatch.setattr(Config, "PROJECTS_MONGO_URI", None)
+    monkeypatch.setattr(Config, "HARDWARE_MONGO_URI", None)
     monkeypatch.setattr(Config, "SESSION_COOKIE_SECURE", True)
     browser = create_app().test_client()
 

@@ -13,7 +13,8 @@ from flask_cors import CORS
 from werkzeug.security import safe_join
 
 from config import Config
-from extensions import get_projects_db, get_users_db, init_db
+from extensions import get_hardware_db, get_projects_db, get_users_db, init_db
+from hardware_migration import copy_hardware_from_projects_db
 from models.hardware import Hardware
 from models.user import User
 from routes.auth import auth_bp
@@ -36,7 +37,10 @@ def create_app(config_class=Config):
     CORS(app, supports_credentials=True)
 
     init_db(app)
-    Hardware.seed(get_projects_db())
+    # Copy any existing hardware data over before seeding, so a deployment
+    # that already has kits out keeps its live counts.
+    copy_hardware_from_projects_db(get_projects_db(), get_hardware_db())
+    Hardware.seed(get_hardware_db())
     User.ensure_indexes(get_users_db())
 
     app.register_blueprint(auth_bp)
@@ -49,6 +53,7 @@ def create_app(config_class=Config):
             "status": "ok",
             "usersDb": app.config["USERS_DB_NAME"],
             "projectsDb": app.config["PROJECTS_DB_NAME"],
+            "hardwareDb": app.config["HARDWARE_DB_NAME"],
         }, 200
 
     _serve_frontend(app)
